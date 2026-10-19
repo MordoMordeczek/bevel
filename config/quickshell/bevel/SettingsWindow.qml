@@ -19,7 +19,6 @@ Scope {
 
     // Which desktop this window was opened in. Shared pages (colours, wallpaper, login, touchpad)
     // show everywhere; the rest only where they do something.
-    readonly property bool xfce: false
     // idx = position in the page stack below; sidebar order = order of this list
     readonly property var allPages: [
         { name: "Wallpaper", idx: 15, where: "both" },
@@ -37,7 +36,7 @@ Scope {
         { name: "Keybinds", idx: 6, where: "hypr" },
         { name: "About", idx: 7, where: "both" }
     ]
-    readonly property var pages: allPages.filter(pg => pg.where === "both" || pg.where === (xfce ? "xfce" : "hypr"))
+    readonly property var pages: allPages.filter(pg => pg.where === "both" || pg.where === "hypr")
 
     // a clickable preview card (Desktop style pages)
     component StyleCard: Bevel {
@@ -345,7 +344,6 @@ Scope {
                                                     }
                                                     SGroup {
                                                         title: "Icons"
-                                                        visible: !root.xfce
                                                         SChoice {
                                                             text: "Icon style"
                                                             model: [{ label: "Retro (Windows 95)", value: "retro" }, { label: "Modern (Breeze)", value: "modern" }]
@@ -519,7 +517,7 @@ Scope {
                                                             onMoved: v => Theme.set("lock.minutes", v)
                                                         }
                                                         BText {
-                                                            visible: !root.xfce && (win.info.missing || []).some(m => m === "hypridle" || m === "hyprlock")
+                                                            visible: (win.info.missing || []).some(m => m === "hypridle" || m === "hyprlock")
                                                             Layout.fillWidth: true
                                                             text: "⚠ Locking needs hypridle and hyprlock: sudo pacman -S hypridle hyprlock, then log out and back in."
                                                             color: Theme.accent
@@ -911,7 +909,7 @@ Scope {
                                                                     ScriptAction {
                                                                         script: {
                                                                             Ui.opsec = true;
-                                                                            if (!root.xfce) root.open = false;
+                                                                            root.open = false;
                                                                         }
                                                                     }
                                                                 }
@@ -972,7 +970,7 @@ Scope {
                                                         RowLayout {
                                                             spacing: 6
                                                             SButton { text: "Re-apply theme"; onClicked: Theme.run(["bevelctl", "apply"]) }
-                                                            SButton { visible: !root.xfce; text: "Reload shell"; onClicked: Quickshell.reload(true) }
+                                                            SButton { text: "Reload shell"; onClicked: Quickshell.reload(true) }
                                                             SButton { text: "Reset to defaults"; onClicked: Theme.run(["bevelctl", "reset"]) }
                                                         }
                                                     }
@@ -1274,7 +1272,7 @@ Scope {
                                                     }
                                                     SGroup {
                                                         title: "\"" + Theme.btwLabel + "\""
-                                                        SCheck { visible: !root.xfce; text: "Show it on the bar (click it for a reply)"; checked: Theme.btw; onToggled: v => Theme.set("fun.btw", v) }
+                                                        SCheck { text: "Show it on the bar (click it for a reply)"; checked: Theme.btw; onToggled: v => Theme.set("fun.btw", v) }
                                                         SCheck { text: "Add it to fastfetch"; checked: Theme.sv("fun.btwFastfetch", true); onToggled: v => Theme.set("fun.btwFastfetch", v) }
                                                         SField {
                                                             text: "Custom text"
@@ -1284,7 +1282,6 @@ Scope {
                                                         BText { text: "Leave it empty for \"I use " + Theme.distro + " btw\". Press Enter to save."; color: Theme.textDim }
                                                     }
                                                     SGroup {
-                                                        visible: !root.xfce
                                                         title: "Screensaver"
                                                         SChoice {
                                                             text: "Screensaver"
@@ -1307,7 +1304,6 @@ Scope {
                                                         }
                                                     }
                                                     SGroup {
-                                                        visible: !root.xfce
                                                         title: "Desktop pet"
                                                         SChoice {
                                                             text: "Pet"
@@ -1327,7 +1323,6 @@ Scope {
                                                     SGroup {
                                                         title: "Little things"
                                                         RowLayout {
-                                                            visible: !root.xfce
                                                             spacing: 10
                                                             SCheck { text: "Tip of the Day at login"; checked: Theme.tips; onToggled: v => Theme.set("fun.tips", v) }
                                                             SButton { text: "Show one now"; onClicked: Theme.run(["qs", "-c", "bevel", "ipc", "call", "tips", "show"]) }
@@ -1371,7 +1366,7 @@ Scope {
                                                         SCheck {
                                                             text: "Show widgets on the desktop"
                                                             checked: Theme.widgetsOn
-                                                            onToggled: v => root.xfce ? Theme.set("widgets.enabled", v) : Theme.setUi("widgets.enabled", v)
+                                                            onToggled: v => Theme.setUi("widgets.enabled", v)
                                                         }
                                                         BText {
                                                             Layout.fillWidth: true
@@ -1442,7 +1437,7 @@ Scope {
                                                         SSlider { text: "Tile size"; from: 70; to: 200; step: 5; value: Theme.sv("widgets.cell", 110); suffix: "px"; onMoved: v => Theme.setUi("widgets.cell", v) }
                                                         SSlider { text: "Space between"; from: 0; to: 24; step: 1; value: Theme.sv("widgets.gap", 8); suffix: "px"; onMoved: v => Theme.setUi("widgets.gap", v) }
                                                         SSlider { text: "Opacity"; from: 0.3; to: 1; step: 0.05; value: Theme.sv("widgets.opacity", 0.95); displayScale: 100; suffix: "%"; onMoved: v => Theme.setUi("widgets.opacity", v) }
-                                                        SCheck { visible: !root.xfce; text: "On every screen (not just the main one)"; checked: Theme.sv("widgets.allScreens", false); onToggled: v => Theme.setUi("widgets.allScreens", v) }
+                                                        SCheck { text: "On every screen (not just the main one)"; checked: Theme.sv("widgets.allScreens", false); onToggled: v => Theme.setUi("widgets.allScreens", v) }
                                                     }
                                                     SGroup {
                                                         title: "Your widgets (" + wpage.list.length + ")"
@@ -1606,7 +1601,7 @@ Scope {
                                                     SGroup {
                                                         visible: !Theme.liveMode
                                                         title: "Effect over the picture"
-                                                        FxPicker { Layout.fillWidth: true; xfce: root.xfce }
+                                                        FxPicker { Layout.fillWidth: true }
                                                     }
                                                     // only the tab you're on is built (28 animation cards are heavy), and kept once built
                                                     Item {
@@ -1636,7 +1631,7 @@ Scope {
                                                             readonly property bool want: Theme.liveMode
                                                             onWantChanged: if (want) active = true
                                                             Component.onCompleted: if (want) active = true
-                                                            sourceComponent: LivePicker { xfce: root.xfce }
+                                                            sourceComponent: LivePicker { }
                                                         }
                                                     }
                                                     SGroup {
@@ -1653,20 +1648,17 @@ Scope {
                                                             onToggled: v => { Theme.setUi("wallpaper.subfolders", v); refreshWalls.restart(); }
                                                         }
                                                         SChoice {
-                                                            visible: !root.xfce
                                                             text: "Super+W picks"
                                                             model: [{ label: "Any wallpaper", value: "all" }, { label: "A favourite", value: "favorites" }]
                                                             current: Theme.sv("wallpaper.randomFrom", "all")
                                                             onPicked: v => Theme.setUi("wallpaper.randomFrom", v)
                                                         }
                                                         BText {
-                                                            visible: !root.xfce
                                                             text: "With an animated background on, Super+W picks a random animation instead."
                                                             color: Theme.textDim
                                                             font.pixelSize: Math.max(10, Theme.fontSize - 2)
                                                         }
                                                         SChoice {
-                                                            visible: !root.xfce
                                                             text: "Transition"
                                                             model: [{ label: "grow", value: "grow" }, { label: "wipe", value: "wipe" }, { label: "fade", value: "fade" },
                                                                     { label: "outer", value: "outer" }, { label: "any", value: "any" }, { label: "none", value: "none" }]

@@ -1888,7 +1888,7 @@ def palette_key(p):
 
 
 def write_gtk_theme(s, p):
-    """Recolor Chicago95 (Windows 95 GTK3 + xfwm4 theme) into ~/.themes/Bevel."""
+    """Recolor the Chicago95 Windows 95 GTK3 theme into ~/.themes/Bevel."""
     if not os.path.isdir(C95_SRC):
         return
     stamp = os.path.join(THEME_DIR, ".bevel-palette")
@@ -3476,26 +3476,6 @@ def screenshot(mode):
     f = os.path.join(d, time.strftime("shot_%Y-%m-%d_%H-%M-%S.png"))
     os.makedirs(CACHE, exist_ok=True)
     full = os.path.join(CACHE, "shot-full.png")
-    if not os.environ.get("WAYLAND_DISPLAY") and shutil.which("maim"):
-        # X11: maim draws its own selection, nothing to crop
-        cmd = ["maim", "-u"]
-        if mode == "region":
-            cmd += ["-s", "-b", "2"]
-        elif mode == "window" and shutil.which("xdotool"):
-            r = run(["xdotool", "getactivewindow"])
-            if r and r.returncode == 0:
-                cmd += ["-i", r.stdout.strip()]
-        try:
-            ok = subprocess.run(cmd + [f], timeout=120).returncode == 0
-        except (OSError, subprocess.SubprocessError):
-            ok = False
-        if not ok:
-            return
-        if shutil.which("xclip"):
-            run(["xclip", "-selection", "clipboard", "-t", "image/png", "-i", f])
-        run(["notify-send", "-a", "Screenshot", "-i", f, "Screenshot saved", "Copied to clipboard · " + os.path.basename(f)])
-        return
-
     r = run(["grim", full])
     if not r or r.returncode != 0:
         run(["notify-send", "-a", "Screenshot", "Screenshot failed", (r.stderr if r else "grim not found")])

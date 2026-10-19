@@ -16,8 +16,6 @@ ShellRoot {
         implicitHeight: 520
         color: Theme.face
         onClosed: Qt.quit()
-
-        readonly property bool xfce: false
         readonly property var keyGroups: KeyList.hypr
         readonly property var pages: [
             { id: "hello", title: "Welcome to Bevel" },

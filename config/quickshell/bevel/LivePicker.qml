@@ -8,8 +8,6 @@ ColumnLayout {
     id: root
     spacing: 10
     Layout.fillWidth: true
-
-    property bool xfce: false
     property string hover: ""
     readonly property bool liveOn: Theme.liveMode
 

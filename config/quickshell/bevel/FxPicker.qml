@@ -5,7 +5,6 @@ import QtQuick.Layouts
 // with a small live preview on top of the current picture.
 RowLayout {
     id: root
-    property bool xfce: false
     spacing: 14
     property string hover: ""
     readonly property string shownKind: hover !== "" ? hover : Theme.fxKind

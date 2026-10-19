@@ -10,6 +10,7 @@ All notable changes to Bevel. Dates are when a build was pushed here.
 - **Setup on Arch-based distros:** it names your distro, and builds Quickshell or Hyprland pieces from the AUR (paru or yay) when your repos don't have them. It also installs `librsvg` for the logos.
 - **No systemd needed (Artix):** service packages and services for OpenRC, runit, dinit and s6; the shut-down menu falls back to `loginctl`; polkit and PipeWire start without systemd user services.
 - The bug report now says which distro and init system you run.
+- Cleanup: dead code paths in Settings and an unused X11 screenshot path are gone.
 
 ## 0.1.0 · 2026-10-19 · first upload
 

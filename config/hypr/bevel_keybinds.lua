@@ -87,4 +87,4 @@ hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = tr
 hl.bind("Print",                    hl.dsp.exec_cmd("bevelctl shot region"))
 hl.bind("SHIFT + Print",            hl.dsp.exec_cmd("bevelctl shot full"))
 hl.bind(mainMod .. " + Print",      hl.dsp.exec_cmd("bevelctl shot window"))
-hl.bind(mainMod .. " + SHIFT + S",  hl.dsp.exec_cmd("bevelctl shot region"))   -- Windows-style snip / Lenovo PrtSc key
+hl.bind(mainMod .. " + SHIFT + S",  hl.dsp.exec_cmd("bevelctl shot region"))   -- Windows-style snip (some laptops' PrtSc key sends this)
