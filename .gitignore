@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# editors and OS clutter
+*.swp
+*~
+.vscode/
+.idea/
+.DS_Store
+
+# local test output and packaging
+*.tar.gz
+bevel-report.txt
+/build/
+/out/

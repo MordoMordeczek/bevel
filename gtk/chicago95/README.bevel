@@ -1,0 +1,4 @@
+This folder contains the GTK 3 and xfwm4 parts of Chicago95 by grassmunk
+(https://github.com/grassmunk/Chicago95), licensed GPL-3.0+/MIT — see CREDITS.
+Bevel recolors a copy of it with your wallpaper palette into ~/.themes/Bevel
+(bevelctl apply). The originals here are left untouched.

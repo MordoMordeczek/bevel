@@ -1,0 +1,48 @@
+name: "🐛 Something broke"
+description: A bug, a crash, or something that looks wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying Bevel! Remember that it's almost entirely vibecoded, so rough edges are expected and reports help a lot.
+
+        **Before you paste anything:** `~/bevel-report.txt` can contain your user name, host name and folder paths. Look through it and remove what you don't want to share.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead. Screenshots are very welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part?
+      options:
+        - Installer / uninstaller
+        - Bar, control panel or menus
+        - Launcher (Super+R)
+        - Bevel Settings (Super+I)
+        - Wallpapers / colours / themes
+        - Animated backgrounds or effects
+        - Desktop widgets
+        - Dock
+        - Login screen or lock screen
+        - Mouse pointer
+        - Several monitors
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: "`hyprctl version | head -1` and `qs --version`"
+      placeholder: "Hyprland 0.55.x, quickshell 0.3.x"
+  - type: textarea
+    id: report
+    attributes:
+      label: Bug report (optional)
+      description: "Super+I → About → Make a bug report, or `bevelctl doctor`. Paste the parts that matter (check them for private details first)."
+      render: text

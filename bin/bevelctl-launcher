@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+# bevelctl — the small front door. The program itself (bevelctl_main.py) sits with your Bevel files,
+# where Python can keep its compiled copy, so each call starts in a few milliseconds instead of
+# reading 6000 lines again. Installed as /usr/local/bin/bevelctl.
+import os
+import sys
+
+for d in (os.path.join(os.path.expanduser("~"), ".local", "share", "bevel", "lib"), "/usr/local/lib/bevel"):
+    if os.path.isfile(os.path.join(d, "bevelctl_main.py")):
+        sys.path.insert(0, d)
+        break
+import bevelctl_main  # noqa: E402
+
+sys.exit(bevelctl_main.main(sys.argv[1:]))
