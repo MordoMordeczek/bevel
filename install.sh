@@ -6,6 +6,8 @@
 #   ./install.sh --no-pkgs    update the config without reinstalling the rice packages
 #                             (apps you tick in the wizard are still installed)
 #   ./install.sh --yes        no wizard, install the recommended set
+#   ./install.sh --update     install a newer Bevel over this one: no wizard, no packages, your
+#                             choices from last time are kept (`bevelctl update` runs this)
 #
 # Everything it replaces is copied to ~/.config/bevel-backup-<date>/ first;
 # ./uninstall.sh puts it back.
@@ -18,13 +20,15 @@ BACKUP="$CONFIG/bevel-backup-$STAMP"
 PKGS=1
 ASSUME_YES=0
 APPS_ONLY=0
+UPDATE=0
 
 for a in "$@"; do
     case "$a" in
+        --update) UPDATE=1 ;;
         --no-pkgs) PKGS=0 ;;
         --yes|-y) ASSUME_YES=1 ;;
         --apps) APPS_ONLY=1 ;;
-        -h|--help) sed -n "2,12p" "$0"; exit 0 ;;
+        -h|--help) awk 'NR > 1 && /^#/ { if ($0 ~ />>>|===|<<<|^#\|/) next; sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
         *) echo "unknown option: $a"; exit 1 ;;
     esac
 done
@@ -106,6 +110,17 @@ for a in "${APPS[@]}"; do
     ON[app_$id]="$dflt"
     [ "${HAVE[$id]}" = 1 ] && ON[app_$id]=1     # already there: keep it themed
 done
+
+# ---- --update: the new version over the old one, with what you picked last time
+if [ "$UPDATE" = 1 ]; then
+    [ "$FRESH" = 1 ] && { echo "Bevel isn't installed yet: run ./install.sh first."; exit 1; }
+    PKGS=0; ASSUME_YES=1
+    ON[sddm_dm]=0
+    if [ -d /usr/share/sddm/themes/bevel ]; then ON[sddm]=1; else ON[sddm]=0; fi
+    if [ "$(bevelctl get style.icons 2>/dev/null | tr -d '"')" = retro ]; then ON[icons]=1; else ON[icons]=0; fi
+    if [ "$(bevelctl get firefox.theme 2>/dev/null)" = false ]; then ON[firefox]=0; else ON[firefox]=1; fi
+    for k in "${!ON[@]}"; do case "$k" in app_*) ON[$k]=0 ;; esac; done
+fi
 
 # ====================================================================== text output
 B=$'\e'
@@ -431,10 +446,12 @@ if [ "$APPS_ONLY" = 1 ]; then
 else
     STEPS=6
     [ "${ON[sddm]}" = 1 ] && STEPS=$((STEPS + 1))
+    [ "${ON[icons]}" = 1 ] && STEPS=$((STEPS + 1))
     [ "${#APP_IDS[@]}" -gt 0 ] && STEPS=$((STEPS + 1))
 fi
 echo
-bold "  Bevel Setup is installing. Sit back."
+if [ "$UPDATE" = 1 ]; then bold "  Updating Bevel to $(cat "$HERE/VERSION" 2>/dev/null || echo "the newest version")…"
+else bold "  Bevel Setup is installing. Sit back."; fi
 
 pacman_install() {   # install what is missing; never stops the whole setup
     local want=() missing=() p
@@ -605,6 +622,10 @@ sudo install -Dm644 "$HERE/bin/bevelctl" /usr/local/lib/bevel/bevelctl_main.py
 sudo python3 -m compileall -q /usr/local/lib/bevel >/dev/null 2>&1 || true
 sudo install -Dm755 "$HERE/bin/bevelctl-launcher" /usr/local/bin/bevelctl && info "/usr/local/bin/bevelctl"
 mkdir -p "$HOME/.local/share/bevel"
+# which version this is, and where it came from (so `bevelctl update` can fetch the next one)
+install -m644 "$HERE/VERSION" "$HOME/.local/share/bevel/VERSION" 2>/dev/null || true
+mkdir -p "$CONFIG/bevel"
+printf '%s\n' "$HERE" > "$CONFIG/bevel/install-source"
 rm -rf "$HOME/.local/share/bevel/chicago95"
 cp -r "$HERE/gtk/chicago95" "$HOME/.local/share/bevel/chicago95"
 info "9x GTK/window theme source (Chicago95, recoloured into ~/.themes/Bevel)"
@@ -699,11 +720,11 @@ fi
 step "Generating the theme"
 if [ "$FRESH" = 1 ]; then
     bevelctl set wallpaper.path "$WALLDIR/$WALLNAME.png" >/dev/null
-    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "${ON[hypr]}" = 1 ]; then
-        SCALE="$(bevelctl suggest-scale 2>/dev/null || echo 1.0)"
-        info "display scale → $SCALE (change it any time in Super+I → Windows & display)"
-        bevelctl set display.scale "$SCALE" >/dev/null
-    fi
+    # Hyprland picks a display scale that fits your screen (Super+I → Windows & display changes it)
+    bevelctl set display.scale auto >/dev/null
+    # your keyboard layout, as the system has it (Super+I → Keyboard & touchpad changes it)
+    KB="$(bevelctl keyboard detect 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("layout",""))' 2>/dev/null)"
+    [ -n "$KB" ] && info "keyboard layout → $KB (from your system)"
 fi
 if [ "$(bevelctl get version 2>/dev/null || echo null)" = "null" ]; then
     bevelctl set style.fontSize 14 bar.height 30 version 2 >/dev/null
@@ -848,7 +869,7 @@ fi
 printf '%s[34m %s 100%%%s[0m\n' "$B" "$(rep █ 60)" "$B"
 
 done_lines=(
-    "Bevel Setup has finished installing."
+    "$([ "$UPDATE" = 1 ] && echo "Bevel is updated to version $(cat "$HERE/VERSION" 2>/dev/null || echo "?")." || echo "Bevel Setup has finished installing.")"
     ""
 )
 if [ "$APPS_ONLY" = 0 ]; then

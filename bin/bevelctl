@@ -12,7 +12,10 @@ Commands
   bevelctl preset classic|soft|modern apply a style preset
   bevelctl get [KEY]                  print settings (or one value)
   bevelctl scales                     print valid display scales for each monitor (JSON)
-  bevelctl suggest-scale              one notch smaller than the current scale (installer uses this)
+  bevelctl keyboard [detect]          the keyboard layout Hyprland gets; detect = take your system's
+  bevelctl update [--check]           get the newest Bevel from git and install it (--check: just look)
+  bevelctl version                    the installed Bevel version
+  bevelctl edit [WHAT]                open settings|user|hypr|keybinds|shell|kitty|folder in your editor
   bevelctl shot region|full|window    screenshot to ~/Pictures/Screenshots + clipboard
   bevelctl brightness up|down|get     change every backlight device (hybrid-GPU laptops)
   bevelctl fullscreen [full|max]      toggle fullscreen / maximize on the active window
@@ -139,7 +142,7 @@ DEFAULTS = {
         "inactiveOpacity": 1.0,
         "layout": "dwindle",
     },
-    "display": {"scale": 1.0},      # number, or "auto"
+    "display": {"scale": "auto"},   # number, or "auto" (Hyprland picks one that fits the screen)
     "notifications": {"timeout": 5000},
     "osd": {"timeout": 1400},
     "login": {"dim": 0.55, "sync": True, "wallpaper": ""},   # wallpaper "" = same as desktop
@@ -161,6 +164,10 @@ DEFAULTS = {
         "chime": False,             # start-up chime
         "pet": "off",               # off | sheep
     },
+    # keyboard: XKB layouts ("us", "pl", "us,de"…); empty = Hyprland's default (us). Setup fills it in from
+    # your system. switch: the keys that flip between several layouts
+    "about": {"editor": "auto"},     # where Settings → About opens configs: auto | code | kate | nvim | …
+    "keyboard": {"layout": "", "variant": "", "options": "", "switch": "alt_shift"},
     "touchpad": {"tap": True, "tapMap": "lrm", "clickfinger": True, "natural": False, "dwt": True, "speed": 0.0},
 }
 
@@ -680,10 +687,66 @@ def qt_platform_theme():
     return "qt6ct"
 
 
+KB_SWITCH = {"alt_shift": "grp:alt_shift_toggle", "win_space": "grp:win_space_toggle",
+             "ctrl_shift": "grp:ctrl_shift_toggle", "caps": "grp:caps_toggle", "none": ""}
+
+
+def _xkb_clean(v):
+    """XKB names only: letters, digits and _ - ( ) : + , (nothing that could break out of the Lua string)."""
+    return re.sub(r"[^A-Za-z0-9_,:+()-]", "", str(v or "")).strip(",")
+
+
+def keyboard_cfg(s):
+    """The keyboard settings as Hyprland wants them, with the layout-switch keys added when there are several."""
+    k = s.get("keyboard", {})
+    layout = _xkb_clean(k.get("layout"))
+    variant = _xkb_clean(k.get("variant"))
+    opts = [o for o in _xkb_clean(k.get("options")).split(",") if o and not o.startswith("grp:")]
+    if "," in layout:
+        sw = KB_SWITCH.get(k.get("switch", "alt_shift"), "grp:alt_shift_toggle")
+        if sw:
+            opts.append(sw)
+    if variant and "," in layout and variant.count(",") < layout.count(","):
+        variant += "," * (layout.count(",") - variant.count(","))
+    return {"layout": layout, "variant": variant, "options": ",".join(opts)}
+
+
+def system_keyboard():
+    """The layout your system already uses: localectl (X11 Layout), else Xorg's keyboard file, else the
+    console keymap ("pl2" → pl, "de-latin1" → de, "uk" → gb)."""
+    kb = {"layout": "", "variant": "", "options": ""}
+    r = run(["localectl", "status"])
+    if r and r.returncode == 0:
+        for line in r.stdout.splitlines():
+            k, _, v = line.strip().partition(":")
+            key = {"X11 Layout": "layout", "X11 Variant": "variant", "X11 Options": "options"}.get(k.strip())
+            if key:
+                kb[key] = v.strip()
+    if not kb["layout"]:
+        try:
+            for f in sorted(glob.glob("/etc/X11/xorg.conf.d/*keyboard*.conf")):
+                for line in open(f):
+                    m = re.match(r'\s*Option\s+"Xkb(Layout|Variant|Options)"\s+"([^"]*)"', line)
+                    if m:
+                        kb[m.group(1).lower()] = m.group(2)
+        except OSError:
+            pass
+    if not kb["layout"]:
+        try:
+            for line in open("/etc/vconsole.conf"):
+                if line.startswith("KEYMAP="):
+                    km = line.split("=", 1)[1].strip().strip('"').lower()
+                    km = re.split(r"[-_.]", km)[0].rstrip("0123456789")
+                    kb["layout"] = {"uk": "gb", "slovene": "si", "sg": "ch", "sv": "se", "dk": "dk"}.get(km, km)
+        except OSError:
+            pass
+    return {k: _xkb_clean(v) for k, v in kb.items()}
+
+
 def write_hypr(s, p):
     w = s["windows"]
     st = s["style"]
-    disp = s["display"].get("scale", 1.0)
+    disp = s["display"].get("scale", "auto")
     scale = '"auto"' if disp in ("auto", None, "") else str(float(disp))
     if st.get("bevelBorders"):
         active = '{ colors = { "%s", "%s" }, angle = 135 }' % (rgba(p["accent2"]), rgba(p["accent"]))
@@ -742,7 +805,7 @@ hl.config({{
 """
     tp = s.get("touchpad", {})
     lua += f"""
--- touchpad (Super+I → Touchpad)
+-- touchpad (Super+I → Keyboard & touchpad)
 hl.config({{
     input = {{
         touchpad = {{
@@ -757,6 +820,18 @@ hl.config({{
 """
     if not tp.get("tap", True):
         lua += '-- tap-to-click is on by default in Hyprland; switched off here\npcall(hl.config, { input = { touchpad = { ["tap-to-click"] = false } } })\n'
+    kb = keyboard_cfg(s)
+    if kb["layout"]:
+        lua += f"""
+-- keyboard (Super+I → Keyboard & touchpad)
+pcall(hl.config, {{
+    input = {{
+        kb_layout  = "{kb['layout']}",
+        kb_variant = "{kb['variant']}",
+        kb_options = "{kb['options']}",
+    }},
+}})
+"""
     t = s["terminal"]
     if t.get("floating", True):
         lua += f"""
@@ -3445,6 +3520,8 @@ def system_info():
     except ValueError:
         info["hyprland"] = ""
     info["quickshell"] = (cmd(["qs", "--version"]).splitlines() or [""])[0].replace("quickshell", "").strip()
+    info["version"] = bevel_version()
+    info["editor"] = (find_editor(load_settings()) or {}).get("name", "")
     try:
         with open("/proc/uptime") as f:
             up = int(float(f.read().split()[0]))
@@ -3465,6 +3542,162 @@ def system_info():
     info["missing"] = [c for c in ("hypridle", "hyprlock", "hyprsunset", "bluetoothctl", "nmcli")
                        if not shutil.which(c)]
     return info
+
+
+# ---------------------------------------------------------------- version and updates
+REPO_URL = "https://github.com/MordoMordeczek/bevel.git"
+SOURCE_FILE = os.path.join(CFG, "install-source")
+
+
+def bevel_version():
+    try:
+        with open(os.path.join(SHARE, "VERSION")) as f:
+            return f.read().strip() or "dev"
+    except OSError:
+        return "dev"
+
+
+def install_source():
+    """The folder ./install.sh was run from (Setup writes it down), or ''."""
+    try:
+        with open(SOURCE_FILE) as f:
+            d = f.read().strip()
+        return d if os.path.isfile(os.path.join(d, "install.sh")) else ""
+    except OSError:
+        return ""
+
+
+def _git(src, *a, timeout=60, ask=False):
+    env = dict(os.environ, LC_ALL="C")
+    if not ask:
+        env["GIT_TERMINAL_PROMPT"] = "0"          # from the shell: never sit waiting for a password
+    try:
+        return subprocess.run(["git", "-C", src] + list(a), capture_output=True, text=True, timeout=timeout, env=env)
+    except (OSError, subprocess.SubprocessError) as e:
+        return subprocess.CompletedProcess(a, 1, "", str(e))
+
+
+def update_status(ask=False):
+    """{version, source, git, behind, log, dirty, error} — what `bevelctl update --check` reports."""
+    st = {"version": bevel_version(), "source": install_source(), "git": False, "behind": 0, "log": [], "dirty": False, "error": ""}
+    src = st["source"]
+    if not src or not os.path.isdir(os.path.join(src, ".git")) or not shutil.which("git"):
+        return st
+    st["git"] = True
+    r = _git(src, "fetch", "--quiet", timeout=None if ask else 60, ask=ask)
+    if r.returncode != 0:
+        st["error"] = (r.stderr.strip().splitlines() or ["git fetch failed"])[-1]
+        return st
+    r = _git(src, "rev-list", "--count", "HEAD..@{u}")
+    st["behind"] = int(r.stdout.strip() or 0) if r.returncode == 0 else 0
+    if st["behind"]:
+        r = _git(src, "log", "--format=%s", "HEAD..@{u}")
+        st["log"] = r.stdout.strip().splitlines()[:20]
+    st["dirty"] = bool(_git(src, "status", "--porcelain", "--untracked-files=no").stdout.strip())
+    return st
+
+
+def update(args):
+    """bevelctl update [--check] [--json]: get the newest Bevel from git and install it over this one
+    (your settings, wallpapers and user.lua stay; your choices from Setup are kept)."""
+    st = update_status(ask="--json" not in args and sys.stdin.isatty())
+    if "--json" in args:
+        print(json.dumps(st))
+        return 0
+    print("Bevel %s" % st["version"])
+    if not st["git"]:
+        print("This Bevel wasn't installed from a git clone, so it can't update itself.")
+        print("Get it once with git, then updates are one command:\n")
+        print("    git clone %s ~/bevel" % REPO_URL)
+        print("    cd ~/bevel && ./install.sh --update\n")
+        return 1
+    if st["error"]:
+        print("Couldn't reach GitHub: %s" % st["error"])
+        return 1
+    if not st["behind"]:
+        print("You have the newest version. (%s)" % st["source"])
+        return 0
+    print("%d new change%s:" % (st["behind"], "" if st["behind"] == 1 else "s"))
+    for line in st["log"]:
+        print("  • " + line)
+    if "--check" in args:
+        return 0
+    if st["dirty"]:
+        print("\nYou changed files in %s, so git can't update it safely." % st["source"])
+        print("Keep your own tweaks in ~/.config/hypr/user.lua instead, then: git -C %s stash" % st["source"])
+        return 1
+    print()
+    r = subprocess.run(["git", "-C", st["source"], "pull", "--ff-only"])
+    if r.returncode != 0:
+        print("git pull failed; nothing was changed.")
+        return 1
+    print("\nInstalling the new version…")
+    os.execvp("bash", ["bash", os.path.join(st["source"], "install.sh"), "--update"])
+
+
+# ---------------------------------------------------------------- open configs in an editor
+EDITORS = [  # (command, name, opens folders)
+    ("code", "VS Code", True), ("code-oss", "VS Code", True), ("codium", "VSCodium", True), ("vscodium", "VSCodium", True),
+    ("zeditor", "Zed", True), ("zed", "Zed", True), ("kate", "Kate", True), ("gnome-text-editor", "Text Editor", False),
+    ("mousepad", "Mousepad", False), ("gedit", "gedit", False), ("xed", "Xed", False),
+]
+TERM_EDITORS = ("nvim", "vim", "helix", "hx", "micro", "nano", "vi")
+
+
+def find_editor(s):
+    """The editor configs open in: Settings → About → "Open with", or the first one installed."""
+    want = (s.get("about", {}) or {}).get("editor", "auto")
+    for c, name, folders in EDITORS:
+        if (want in ("auto", c)) and shutil.which(c):
+            return {"cmd": [c], "name": name, "folders": folders}
+    env = (os.environ.get("VISUAL") or os.environ.get("EDITOR") or "").split()
+    for c in ([env[0]] if env else []) + list(TERM_EDITORS):
+        if shutil.which(c) and (want in ("auto", c, "terminal")):
+            return {"cmd": ["kitty", "--class", "bevel-editor", c], "name": os.path.basename(c), "folders": c in ("nvim", "vim", "hx", "helix")}
+    return None
+
+
+def edit_target(what):
+    """What `bevelctl edit WHAT` opens. user.lua / user.conf are made if they don't exist yet."""
+    hypr = os.path.join(HOME, ".config", "hypr")
+    t = {
+        "settings": SETTINGS,
+        "user": os.path.join(hypr, "user.lua"),
+        "hypr": hypr,
+        "keybinds": os.path.join(hypr, "bevel_keybinds.lua"),
+        "shell": os.path.join(HOME, ".config", "quickshell", "bevel"),
+        "kitty": os.path.join(HOME, ".config", "kitty", "user.conf"),
+        "folder": CFG,
+    }.get(what)
+    if t and what == "user" and not os.path.exists(t):
+        os.makedirs(hypr, exist_ok=True)
+        with open(t, "w") as f:
+            f.write("-- Your own Hyprland tweaks. Bevel never overwrites this file; it is loaded last.\n")
+    if t and what == "kitty" and not os.path.exists(t):
+        os.makedirs(os.path.dirname(t), exist_ok=True)
+        with open(t, "w") as f:
+            f.write("# your own kitty tweaks (Bevel never overwrites this file)\n")
+    return t
+
+
+def edit(args):
+    what = args[0] if args else "settings"
+    t = edit_target(what)
+    if not t:
+        print("bevelctl edit settings|user|hypr|keybinds|shell|kitty|folder", file=sys.stderr)
+        return 1
+    ed = find_editor(load_settings())
+    if what == "folder" or ed is None or (os.path.isdir(t) and not ed["folders"]):
+        cmd = ["xdg-open", t]                       # the file manager (or whatever opens the file)
+    else:
+        cmd = ed["cmd"] + [t]
+    try:
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    except OSError as e:
+        print("could not open %s: %s" % (t, e), file=sys.stderr)
+        return 1
+    return 0
 
 
 # ---------------------------------------------------------------- screenshots
@@ -4785,17 +5018,25 @@ def main(argv):
             print("bevel: displays reset")
         else:
             print(json.dumps(displays()))
-    elif cmd == "suggest-scale":
-        # one notch smaller than what Hyprland picked on its own (used by the installer)
-        opts = scale_options()
-        if not opts:
-            print(1.0)
-            return 0
-        cur = float(opts[0].get("scale") or 1)
-        nice = [o for o in opts[0]["options"]
-                if abs(o * 20 - round(o * 20)) < 1e-6 or abs(o * 3 - round(o * 3)) < 1e-6]
-        smaller = [o for o in nice if o < cur - 0.01]
-        print(max(smaller) if smaller and cur > 1.01 else 1.0)
+    elif cmd == "update":
+        return update(args)
+    elif cmd == "version":
+        print(bevel_version())
+    elif cmd == "edit":
+        return edit(args)
+    elif cmd == "keyboard":
+        # bevelctl keyboard          what Hyprland gets (JSON)
+        # bevelctl keyboard detect   take the layout your system uses (the installer runs this once)
+        if args[:1] == ["detect"]:
+            kb = system_keyboard()
+            if kb["layout"]:
+                update_settings({"keyboard.layout": kb["layout"], "keyboard.variant": kb["variant"],
+                                 "keyboard.options": kb["options"]})
+                if "--apply" in args:
+                    apply(quiet=True, split=True)
+            print(json.dumps(kb))
+        else:
+            print(json.dumps(keyboard_cfg(load_settings())))
     elif cmd == "shot":
         screenshot(args[0] if args else "region")
     elif cmd == "session":

@@ -77,13 +77,8 @@ hl.config({
 ---------------
 hl.config({
     input = {
-        kb_layout  = "us",
-        kb_variant = "",
-        kb_model   = "",
-        kb_options = "",
-        kb_rules   = "",
         follow_mouse = 1,
-        -- touchpad and pointer speed: bevel_generated.lua (Super+I → Touchpad)
+        -- keyboard layout, touchpad and pointer speed: bevel_generated.lua (Super+I → Keyboard & touchpad)
     },
 })
 
@@ -132,6 +127,15 @@ pcall(hl.window_rule, {
     float = true,
     center = true,
     size  = "760 520",
+})
+
+-- `bevelctl update` from Settings → About runs in a floating terminal
+pcall(hl.window_rule, {
+    name  = "bevel-update",
+    match = { class = "^bevel-update$" },
+    float = true,
+    center = true,
+    size  = "820 520",
 })
 
 -- Tip of the Day floats in the middle too

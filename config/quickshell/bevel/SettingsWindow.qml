@@ -30,7 +30,7 @@ Scope {
         { name: "Bar", idx: 3, where: "hypr" },
         { name: "Windows & display", idx: 4, where: "hypr" },
         { name: "Notifications & OSD", idx: 5, where: "hypr" },
-        { name: "Touchpad", idx: 11, where: "both" },
+        { name: "Keyboard & touchpad", idx: 11, where: "both" },
         { name: "Login screen", idx: 1, where: "both" },
         { name: "Fun", idx: 13, where: "both" },
         { name: "Keybinds", idx: 6, where: "hypr" },
@@ -965,13 +965,100 @@ Scope {
                                                     }
 
                                                     SGroup {
-                                                        title: "Bevel"
+                                                        title: "Bevel " + (win.info.version || "")
                                                         BText { text: "Settings: ~/.config/bevel/settings.json  ·  CLI: bevelctl --help"; color: Theme.textDim }
                                                         RowLayout {
                                                             spacing: 6
                                                             SButton { text: "Re-apply theme"; onClicked: Theme.run(["bevelctl", "apply"]) }
                                                             SButton { text: "Reload shell"; onClicked: Quickshell.reload(true) }
                                                             SButton { text: "Reset to defaults"; onClicked: Theme.run(["bevelctl", "reset"]) }
+                                                        }
+                                                    }
+
+                                                    // ---- updates: `bevelctl update --check --json`, then the update itself in a terminal
+                                                    SGroup {
+                                                        id: upd
+                                                        title: "Updates"
+                                                        property var st: null
+                                                        property bool busy: chk.running
+                                                        Process {
+                                                            id: chk
+                                                            command: ["bevelctl", "update", "--check", "--json"]
+                                                            stdout: StdioCollector {
+                                                                onStreamFinished: { try { upd.st = JSON.parse(text); } catch (e) { upd.st = { error: "no answer from bevelctl" }; } }
+                                                            }
+                                                        }
+                                                        RowLayout {
+                                                            spacing: 6
+                                                            SButton { text: upd.busy ? "Checking…" : "Check for updates"; enabled: !upd.busy; onClicked: { upd.st = null; chk.running = true; } }
+                                                            SButton {
+                                                                visible: upd.st !== null && (upd.st.behind || 0) > 0
+                                                                highlighted: true
+                                                                text: "Update now"
+                                                                onClicked: Theme.run(["kitty", "--class", "bevel-update", "--title", "Bevel update", "--hold", "bevelctl", "update"])
+                                                            }
+                                                        }
+                                                        BText {
+                                                            Layout.fillWidth: true
+                                                            visible: text !== ""
+                                                            textFormat: Text.StyledText
+                                                            wrapMode: Text.Wrap
+                                                            maximumLineCount: 12
+                                                            elide: Text.ElideNone
+                                                            text: {
+                                                                const t = upd.st;
+                                                                if (t === null) return upd.busy ? "" : "Updates come from the git folder you installed Bevel from. Your settings, wallpapers and user.lua stay as they are.";
+                                                                if (!t.git) return "This Bevel wasn't installed from a git clone, so it can't update itself. Once: <b>git clone https://github.com/MordoMordeczek/bevel.git ~/bevel</b>, then <b>cd ~/bevel && ./install.sh --update</b>. After that, updates are one click.";
+                                                                if (t.error) return "Couldn't reach GitHub: " + t.error;
+                                                                if (!t.behind) return "You have the newest version (" + t.version + ").";
+                                                                return "<b>" + t.behind + " new change" + (t.behind === 1 ? "" : "s") + ":</b><br>• " + t.log.slice(0, 6).join("<br>• ")
+                                                                       + (t.log.length > 6 ? "<br>…" : "")
+                                                                       + (t.dirty ? "<br><br>⚠ You changed files in " + t.source + "; the update will ask you to stash them first." : "")
+                                                                       + "<br><br>\"Update now\" opens a terminal: it may ask for your password (the login screen and bevelctl live in system folders).";
+                                                            }
+                                                        }
+                                                    }
+
+                                                    // ---- the config files, in VS Code (or whatever editor you have)
+                                                    SGroup {
+                                                        title: "Your config files"
+                                                        Flow {
+                                                            Layout.fillWidth: true
+                                                            spacing: 6
+                                                            Repeater {
+                                                                model: [
+                                                                    { label: "Settings (settings.json)", what: "settings" },
+                                                                    { label: "My Hyprland tweaks (user.lua)", what: "user" },
+                                                                    { label: "Keybinds", what: "keybinds" },
+                                                                    { label: "Hyprland folder", what: "hypr" },
+                                                                    { label: "The shell (QML)", what: "shell" },
+                                                                    { label: "kitty (user.conf)", what: "kitty" },
+                                                                    { label: "Open the Bevel folder", what: "folder" }
+                                                                ]
+                                                                SButton {
+                                                                    required property var modelData
+                                                                    text: modelData.label
+                                                                    onClicked: Theme.run(["bevelctl", "edit", modelData.what])
+                                                                }
+                                                            }
+                                                        }
+                                                        SChoice {
+                                                            text: "Open with"
+                                                            model: [{ label: "Auto", value: "auto" }, { label: "VS Code", value: "code" }, { label: "VSCodium", value: "codium" },
+                                                                    { label: "Kate", value: "kate" }, { label: "Zed", value: "zeditor" }, { label: "Neovim", value: "nvim" }]
+                                                            current: Theme.sv("about.editor", "auto")
+                                                            onPicked: v => { Theme.setUi("about.editor", v); reInfo.restart(); }
+                                                            Timer { id: reInfo; interval: 800; onTriggered: infoProc.running = true }
+                                                        }
+                                                        BText {
+                                                            Layout.fillWidth: true
+                                                            text: (win.info.editor ? "Opens in " + win.info.editor + ". " : "No editor found: files open with your default app. ")
+                                                                  + "Bevel's own files (keybinds, the shell) are replaced when you update; put your changes in user.lua and kitty's user.conf, which are never touched."
+                                                            color: Theme.textDim
+                                                            wrapMode: Text.Wrap
+                                                            maximumLineCount: 4
+                                                            elide: Text.ElideNone
+                                                            font.pixelSize: Math.max(10, Theme.fontSize - 2)
                                                         }
                                                     }
                                                     SGroup {
@@ -1018,6 +1105,46 @@ Scope {
                                                 ColumnLayout {
                                                     width: parent.width
                                                     spacing: 14
+                                                    SGroup {
+                                                        title: "Keyboard"
+                                                        SField {
+                                                            text: "Layouts"
+                                                            value: Theme.sv("keyboard.layout", "")
+                                                            onAccepted: t => Theme.set("keyboard.layout", t.replace(/\s+/g, "").toLowerCase())
+                                                        }
+                                                        SField {
+                                                            text: "Variant"
+                                                            value: Theme.sv("keyboard.variant", "")
+                                                            onAccepted: t => Theme.set("keyboard.variant", t.replace(/\s+/g, ""))
+                                                        }
+                                                        SChoice {
+                                                            visible: (Theme.sv("keyboard.layout", "") || "").indexOf(",") >= 0
+                                                            text: "Switch with"
+                                                            model: [{ label: "Alt+Shift", value: "alt_shift" }, { label: "Super+Space", value: "win_space" },
+                                                                    { label: "Ctrl+Shift", value: "ctrl_shift" }, { label: "Caps Lock", value: "caps" }, { label: "Nothing", value: "none" }]
+                                                            current: Theme.sv("keyboard.switch", "alt_shift")
+                                                            onPicked: v => Theme.set("keyboard.switch", v)
+                                                        }
+                                                        RowLayout {
+                                                            spacing: 8
+                                                            SButton { text: "Use my system's layout"; onClicked: Theme.run(["bevelctl", "keyboard", "detect", "--apply"]) }
+                                                            BText {
+                                                                Layout.fillWidth: true
+                                                                text: "Now: " + ((Theme.sv("keyboard.layout", "") || "us") + (Theme.sv("keyboard.variant", "") ? " (" + Theme.sv("keyboard.variant", "") + ")" : ""))
+                                                                color: Theme.textDim
+                                                            }
+                                                        }
+                                                        BText {
+                                                            Layout.fillWidth: true
+                                                            text: "Layout codes, comma separated: us, gb, pl, de, fr, es, it, ru, ua, cz… \"us,pl\" gives you two, and the keys above flip between them. "
+                                                                  + "Variants are optional (intl, dvorak, colemak…). Empty = US. Press Enter to save."
+                                                            color: Theme.textDim
+                                                            font.pixelSize: Math.max(10, Theme.fontSize - 2)
+                                                            wrapMode: Text.Wrap
+                                                            maximumLineCount: 4
+                                                            elide: Text.ElideNone
+                                                        }
+                                                    }
                                                     SGroup {
                                                         title: "Tapping"
                                                         SCheck { text: "Tap to click"; checked: Theme.sv("touchpad.tap", true); onToggled: v => Theme.set("touchpad.tap", v) }

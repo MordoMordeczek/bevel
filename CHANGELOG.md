@@ -2,6 +2,14 @@
 
 All notable changes to Bevel. Dates are when a build was pushed here.
 
+## 0.3.0 · 2026-10-20 · keyboard layouts, updates, config buttons
+
+- **Keyboard layouts.** No more fixed US layout. Setup takes yours from the system, and Settings → Keyboard & touchpad sets one or more layouts (`us,pl`), a variant, and the keys that switch between them.
+- **One-command updates.** `bevelctl update` (or Super+I → About → Check for updates) pulls the newest Bevel and installs it with the new `./install.sh --update`: no wizard, no packages, your choices, settings and `user.lua` kept.
+- **Your config files, one click away.** Settings → About opens `settings.json`, `user.lua`, the keybinds, the Hyprland folder, the shell and kitty's `user.conf` in VS Code or whichever editor you have (`bevelctl edit …` from a terminal). About also shows the Bevel version.
+- **Display scale:** new installs use the scale Hyprland picks for your screen instead of one step smaller.
+- The Setup progress bar now counts the retro icons step.
+
 ## 0.2.0 · 2026-10-20 · Arch-based distros
 
 - **Your distro, not just Arch.** fastfetch, the System info and "btw" widgets, the bar badge, the Start menu and the login screen now show the distro you actually run: "I use CachyOS btw", "EndeavourOS" on the login screen, and so on.

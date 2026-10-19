@@ -109,12 +109,21 @@ The installer is a Windows 95-style wizard. Pick the login screen, retro icons, 
 
 | Option | What it does |
 |---|---|
+| `./install.sh --update` | Install a newer version over this one, keeping your choices (`bevelctl update` runs it) |
 | `./install.sh --no-pkgs` | Update the config only, without reinstalling the rice's packages |
 | `./install.sh --apps` | Just the apps page, to add apps later |
 | `./install.sh --yes` | No wizard: everything, plus the recommended apps |
 | `./uninstall.sh` | Put your old config back |
 
-Run it from a terminal **inside Hyprland** if you can, so it can pick a display scale that fits your screen. To update, `git pull`, then run `./install.sh --no-pkgs`.
+Setup takes your keyboard layout from the system and lets Hyprland pick a display scale that fits your screen; both can be changed in Super+I.
+
+### Updating
+
+```sh
+bevelctl update            # or: Super+I → About → Check for updates
+```
+
+It pulls the newest Bevel into the folder you installed from and runs `./install.sh --update`. Your settings, wallpapers and `user.lua` stay as they are.
 
 <br>
 
@@ -144,6 +153,8 @@ bevelctl wallpaper ~/Pictures/Wallpapers/foo.png   # set a wallpaper and recolou
 bevelctl live synthwave '#c03070' neon             # animated background (live off = back to a picture)
 bevelctl theme import Vaporwave.bevel              # someone's whole look, in one file
 bevelctl set style.rounding 0 windows.gapsIn 6     # change any setting
+bevelctl edit user                                 # your Hyprland tweaks (user.lua) in VS Code or your editor
+bevelctl update                                    # get the newest Bevel
 bevelctl doctor                                    # write a report to ~/bevel-report.txt
 ```
 

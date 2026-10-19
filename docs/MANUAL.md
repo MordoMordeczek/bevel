@@ -34,7 +34,7 @@ Everything Bevel does, page by page. Back to the [README](../README.md).
 - [Where things live](#where-things-live)
 - [Firefox](#firefox)
 - [Login screen](#login-screen)
-- [Touchpad](#touchpad)
+- [Keyboard & touchpad](#keyboard--touchpad)
 - [Several monitors](#several-monitors)
 - [bevelctl](#bevelctl)
 - [Troubleshooting](#troubleshooting)
@@ -58,8 +58,11 @@ Your old files are copied to `~/.config/bevel-backup-<date>/` first, and `./unin
 | `./install.sh --apps` | Only the apps page, to add apps later |
 | `./install.sh --no-pkgs` | Update the config without reinstalling the rice's packages (apps you tick are still installed) |
 | `./install.sh --yes` | No wizard: everything plus the recommended apps |
+| `./install.sh --update` | Install a newer version over this one: no wizard, no packages, your earlier choices kept |
 
-Run it from a terminal **inside Hyprland** if you can: that way it can pick a display scale that fits your screen.
+Setup takes your keyboard layout from the system (`localectl`) and lets Hyprland pick a display scale that fits your screen. Change either one in Super+I.
+
+**Updating:** `bevelctl update`, or Super+I → About → **Check for updates** → **Update now**. It runs `git pull` in the folder you installed from, then `./install.sh --update`. Your settings, wallpapers, `user.lua` and kitty's `user.conf` stay as they are. If you changed Bevel's own files in that folder, it stops and tells you; put your changes in `user.lua` instead. Installed from a download rather than git? Clone it once (`git clone https://github.com/MordoMordeczek/bevel.git ~/bevel`), run `./install.sh --update` from there, and `bevelctl update` works from then on.
 
 ## Apps
 
@@ -214,7 +217,9 @@ Super+I → Look & colors → Icon style switches between **Retro** (the Windows
 
 ## Bevel Settings
 
-Super+I opens Bevel Settings as its own small app. Every change is saved through `bevelctl patch`, which merges just the changed setting into `settings.json` under a lock. The bar, the settings window and `bevelctl` can't overwrite each other's changes any more, so switching wallpapers, animations and colours quickly is safe.
+Super+I opens Bevel Settings as its own small app. Its **About** page shows the version, checks for updates, and has buttons that open your config files in VS Code (or VSCodium, Zed, Kate, Neovim…; "Open with" picks): `settings.json`, your Hyprland tweaks in `user.lua`, the keybinds, the Hyprland folder, the shell's QML, kitty's `user.conf`, or the Bevel folder in your file manager. Bevel's own files (keybinds, the shell) are replaced when you update, so keep your changes in `user.lua` and `user.conf`. `bevelctl edit user|settings|keybinds|hypr|shell|kitty|folder` does the same from a terminal.
+
+ Every change is saved through `bevelctl patch`, which merges just the changed setting into `settings.json` under a lock. The bar, the settings window and `bevelctl` can't overwrite each other's changes any more, so switching wallpapers, animations and colours quickly is safe.
 
 ## Hyprland desktop styles
 
@@ -289,9 +294,11 @@ sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/bevel
 
 To stop syncing it, run `bevelctl set login.sync false`. `bevelctl set login.dim 0.3` makes the background dither lighter.
 
-## Touchpad
+## Keyboard & touchpad
 
-Settings → Touchpad: tap to click; 2-finger tap = right click and 3-finger tap = middle click; pressing down with 2 or 3 fingers does the same; natural scrolling; ignore while typing; pointer speed.
+**Keyboard:** Settings → Keyboard & touchpad → Layouts takes XKB layout codes: `us`, `gb`, `pl`, `de`, `fr`… Give two or more (`us,pl`) and pick the keys that flip between them: Alt+Shift, Super+Space, Ctrl+Shift or Caps Lock. A variant (`intl`, `dvorak`, `colemak`…) is optional. "Use my system's layout" copies what `localectl` reports. From a terminal: `bevelctl set keyboard.layout us,pl`.
+
+**Touchpad:** tap to click; 2-finger tap = right click and 3-finger tap = middle click; pressing down with 2 or 3 fingers does the same; natural scrolling; ignore while typing; pointer speed.
 
 ## Several monitors
 
@@ -310,7 +317,10 @@ Plug a monitor in and the bar, the desktop layer and (if you like) the dock and 
 bevelctl wallpaper ~/Pictures/Wallpapers/foo.jpg   # set wallpaper and recolor everything
 bevelctl set style.rounding 0 windows.gapsIn 6      # change any setting
 bevelctl preset classic|soft|modern
-bevelctl set display.scale 1.25                     # or "auto"
+bevelctl set display.scale 1.25                     # or "auto" (the default: Hyprland picks)
+bevelctl set keyboard.layout us,pl                  # keyboard layouts (Alt+Shift switches)
+bevelctl update                                     # newest Bevel from git (--check: just look)
+bevelctl edit user                                  # open user.lua in your editor
 bevelctl apply                                      # regenerate everything
 bevelctl random favorites                           # a random favourite
 bevelctl live galaxy '#5a4fcf' dusk                 # animated background (live off = back to a picture)
