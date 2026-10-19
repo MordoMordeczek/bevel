@@ -18,6 +18,7 @@ Commands
   bevelctl fullscreen [full|max]      toggle fullscreen / maximize on the active window
   bevelctl reset                      restore default settings
   bevelctl doctor                     write a diagnostic report to ~/bevel-report.txt
+  bevelctl distro [--json]            the distro name Bevel shows (and its logo, as JSON)
   bevelctl settings                   open the Bevel settings window
   bevelctl restart-apps [dolphin] [firefox]  reopen them in the current colours (tabs kept)
   bevelctl lock                      lock the screen
@@ -152,6 +153,8 @@ DEFAULTS = {
         "btw": False,               # "I use Arch btw" badge on the bar
         "btwText": "",              # empty = "I use <your distro> btw"
         "btwFastfetch": True,       # and a line in fastfetch
+        "distroName": "",           # empty = from /etc/os-release ("Arch", "CachyOS", …)
+        "distroLogo": "auto",       # auto | arch (Bevel's pixel Arch) | classic (fastfetch's own) | none
         "tips": True,               # Tip of the Day at login
         "screensaver": "starfield", # off | starfield | mystify | pipes
         "saverMinutes": 10,
@@ -549,8 +552,12 @@ def rgba(hexc, alpha=1.0):
 
 
 def write_quickshell(s, p):
+    try:
+        di = write_distro_logo(s)
+    except Exception:  # noqa: BLE001 — never let the logo stop the colours
+        di = {"name": "Linux", "logo": "generic"}
     write_atomic(os.path.join(GEN, "colors.json"), json.dumps(
-        {k: v for k, v in p.items() if k != "ansi"} | {"ansi": p["ansi"], "wallpaper": wall_path(s)},
+        {k: v for k, v in p.items() if k != "ansi"} | {"ansi": p["ansi"], "wallpaper": wall_path(s), "distro": di},
         indent=2) + "\n")
 
 
@@ -1562,20 +1569,229 @@ def halfblock_art(rows, colors):
     return "\n".join(out) + "\n"
 
 
-def distro_name():
-    """'Arch', 'Fedora', … from /etc/os-release."""
+# ---------------------------------------------------------------- your distro
+# Everything that says "Arch" (fastfetch, the btw badge and widget, the login screen) asks here instead,
+# so CachyOS says CachyOS. Settings → Fun can override the name and the logo.
+ARCH_FAMILY = {"arch", "artix", "manjaro", "endeavouros", "cachyos", "garuda", "arcolinux", "archcraft", "rebornos",
+               "archlabs", "mabox", "xerolinux", "archbang", "parabola", "hyperbola", "blendos", "bluestar", "crystal",
+               "biglinux", "obarun", "steamos", "chimeraos"}
+DISTRO_LOGO_GRID = 32
+
+
+def os_release():
+    """/etc/os-release as a dict (BEVEL_OS_RELEASE points somewhere else, for testing)."""
+    kv = {}
+    for path in (os.environ.get("BEVEL_OS_RELEASE"), "/etc/os-release", "/usr/lib/os-release"):
+        if not path:
+            continue
+        try:
+            with open(path) as f:
+                for ln in f:
+                    if "=" in ln and not ln.lstrip().startswith("#"):
+                        k, v = ln.rstrip("\n").split("=", 1)
+                        kv[k.strip()] = v.strip().strip('"').strip("'")
+            return kv
+        except OSError:
+            continue
+    return kv
+
+
+def find_distro_logo(names):
+    """The distro's own logo file (a picture its branding package installed), or ''."""
+    roots = [os.path.join(HOME, ".local", "share", "icons", "hicolor"), "/usr/share/icons/hicolor"]
+    sizes = ("scalable", "512x512", "256x256", "192x192", "128x128", "96x96", "64x64", "48x48")
+    for n in names:
+        if not n or "/" in n:
+            continue
+        cands = ["/usr/share/pixmaps/%s.%s" % (n, e) for e in ("svg", "png")]
+        cands += ["%s/%s/apps/%s.%s" % (r, z, n, e) for r in roots for z in sizes for e in ("svg", "png")]
+        for c in cands:
+            if os.path.isfile(c):
+                return c
+    return ""
+
+
+def distro_info(s=None):
+    """id, names and logo of the distro you run, with the Settings → Fun overrides applied."""
+    kv = os_release()
+    did = (kv.get("ID") or "linux").lower()
+    like = (kv.get("ID_LIKE") or "").lower().split()
+    full = kv.get("NAME") or kv.get("ID") or "Linux"
+    fun = (s if s is not None else load_settings()).get("fun", {})
+    custom = (fun.get("distroName") or "").strip()
+    mode = fun.get("distroLogo", "auto")
+    if mode not in ("auto", "arch", "classic", "none"):
+        mode = "auto"
+    path = "" if mode in ("arch", "none") else find_distro_logo([kv.get("LOGO"), did, did + "-logo", "distributor-logo-" + did])
+    if mode == "none":
+        kind = "none"
+    elif mode == "arch" or (did == "arch" and (mode == "auto" or not path)):
+        kind = "arch"
+    else:
+        kind = "system" if path else "generic"
+    color = ""
+    m = re.search(r"38;2;(\d+);(\d+);(\d+)", kv.get("ANSI_COLOR", ""))
+    if m:
+        color = "#%02x%02x%02x" % tuple(int(x) for x in m.groups())
+    return {
+        "id": did, "like": like, "archBased": did in ARCH_FAMILY or "arch" in like,
+        "name": custom or re.sub(r"\s+(GNU/)?Linux$", "", full).strip() or "Linux",
+        "detected": re.sub(r"\s+(GNU/)?Linux$", "", full).strip() or "Linux",
+        "fullName": custom or full, "pretty": kv.get("PRETTY_NAME") or full,
+        "logoMode": mode, "logo": kind, "logoFile": path, "color": color,
+    }
+
+
+def distro_name(s=None):
+    """'Arch', 'CachyOS', … or the name you set in Settings → Fun."""
     try:
-        with open("/etc/os-release") as f:
-            kv = dict(ln.rstrip("\n").split("=", 1) for ln in f if "=" in ln)
-    except OSError:
+        return distro_info(s)["name"]
+    except Exception:  # noqa: BLE001 — a name is never worth a crash
         return "Linux"
-    name = (kv.get("NAME") or kv.get("ID") or "Linux").strip('"')
-    return name.replace(" Linux", "").replace(" GNU/Linux", "").strip() or "Linux"
 
 
 def btw_text(s):
     t = (s.get("fun", {}).get("btwText") or "").strip()
-    return t or "I use %s btw" % distro_name()
+    return t or "I use %s btw" % distro_name(s)
+
+
+def distro_pixels(path):
+    """The distro's logo as DISTRO_LOGO_GRID² pixel art in a few colours, with a 9x light left edge and
+    dark right edge: (rows, {char: (r, g, b)}). Cached per file; None if it can't be read."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    key = "%s|%d|%d" % (path, st.st_mtime, DISTRO_LOGO_GRID)
+    cache = os.path.join(CACHE, "distro-logo.json")
+    try:
+        with open(cache) as f:
+            c = json.load(f)
+        if c.get("key") == key:
+            return c["rows"], {k: tuple(v) for k, v in c["colors"].items()}
+    except (OSError, ValueError, KeyError):
+        pass
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    try:
+        if path.endswith(".svg"):
+            png = None
+            for cmd in (["rsvg-convert", "-w", "256", "-h", "256", "--keep-aspect-ratio", path],
+                        ["magick", "-background", "none", "-density", "300", path, "-resize", "256x256", "png:-"],
+                        ["convert", "-background", "none", "-density", "300", path, "-resize", "256x256", "png:-"]):
+                if shutil.which(cmd[0]):
+                    r = subprocess.run(cmd, capture_output=True, timeout=15)
+                    if r.returncode == 0 and r.stdout:
+                        png = r.stdout
+                        break
+            if png is None:
+                return None
+            img = Image.open(io.BytesIO(png))
+        else:
+            img = Image.open(path)
+        img = img.convert("RGBA")
+    except Exception:  # noqa: BLE001
+        return None
+    box = img.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox()
+    if not box:
+        return None
+    img = img.crop(box)
+    n = DISTRO_LOGO_GRID
+    w, h = img.size
+    k = n / max(w, h)
+    img = img.resize((max(1, round(w * k)), max(1, round(h * k))), Image.BOX)
+    canvas = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    canvas.paste(img, ((n - img.size[0]) // 2, (n - img.size[1]) // 2))
+    alpha = canvas.getchannel("A")
+    a = alpha.load()
+    on = [[a[x, y] >= 110 for x in range(n)] for y in range(n)]
+    # a few flat colours, like a 16-colour icon; see-through pixels get the average so they don't use a slot
+    opaque = [canvas.getpixel((x, y))[:3] for y in range(n) for x in range(n) if on[y][x]]
+    if not opaque:
+        return None
+    avg = tuple(sum(c[i] for c in opaque) // len(opaque) for i in range(3))
+    flat = Image.new("RGB", (n, n), avg)
+    flat.paste(canvas.convert("RGB"), (0, 0), alpha.point(lambda v: 255 if v >= 110 else 0))
+    rgb = flat.quantize(colors=6, method=Image.Quantize.MEDIANCUT).convert("RGB").load()
+    pal, rows = {}, []
+    pool = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+    def shade(c, f):
+        return tuple(max(0, min(255, round(v * f + (255 * (f - 1) if f > 1 else 0) * 0.35))) for v in c)
+    for y in range(n):
+        row = ""
+        for x in range(n):
+            if not on[y][x]:
+                row += "."
+                continue
+            c = rgb[x, y]
+            def solid(xx, yy):
+                return 0 <= xx < n and 0 <= yy < n and on[yy][xx]
+            # 9x bevel on shapes at least 2 px thick: lit from the top left, shadow on the bottom right
+            if (not solid(x - 1, y) or not solid(x, y - 1)) and solid(x + 1, y) and solid(x, y + 1):
+                c = shade(c, 1.28)
+            elif (not solid(x + 1, y) or not solid(x, y + 1)) and solid(x - 1, y) and solid(x, y - 1):
+                c = shade(c, 0.68)
+            if c not in pal:
+                if len(pal) >= len(pool):
+                    c = min(pal, key=lambda q: sum((q[i] - c[i]) ** 2 for i in range(3)))
+                else:
+                    pal[c] = pool[len(pal)]
+            row += pal[c]
+        rows.append(row)
+    colors = {ch: c for c, ch in pal.items()}
+    # trim empty columns and rows so the art sits flush like the hand-made Arch one
+    keep = [x for x in range(n) if any(r[x] != "." for r in rows)]
+    rows = [r[keep[0]:keep[-1] + 1] for r in rows if r.strip(".")]
+    try:
+        os.makedirs(CACHE, exist_ok=True)
+        with open(cache, "w") as f:
+            json.dump({"key": key, "rows": rows, "colors": {k2: list(v) for k2, v in colors.items()}}, f)
+    except OSError:
+        pass
+    return rows, colors
+
+
+def write_distro_logo(s, d=None):
+    """generated/distro-logo.png: the pixel version of your distro's logo for the shell (1 px per pixel;
+    the shell scales it up in whole steps so it stays crisp). Returns the distro info."""
+    d = d or distro_info(s)
+    out = os.path.join(GEN, "distro-logo.png")
+    art = distro_pixels(d["logoFile"]) if d["logo"] == "system" else None
+    if not art:
+        if d["logo"] == "system":
+            d["logo"] = "generic"
+        return d
+    rows, colors = art
+    try:
+        from PIL import Image
+        img = Image.new("RGBA", (DISTRO_LOGO_GRID, DISTRO_LOGO_GRID), (0, 0, 0, 0))
+        oy = (DISTRO_LOGO_GRID - len(rows)) // 2
+        ox = (DISTRO_LOGO_GRID - len(rows[0])) // 2
+        for y, r in enumerate(rows):
+            for x, ch in enumerate(r):
+                if ch != ".":
+                    img.putpixel((ox + x, oy + y), colors[ch] + (255,))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        data = buf.getvalue()
+        try:
+            with open(out, "rb") as f:
+                same = f.read() == data
+        except OSError:
+            same = False
+        if not same:
+            tmp = out + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(data)
+            os.replace(tmp, out)
+        d["logoPng"] = out
+        d["logoStamp"] = int(os.stat(out).st_mtime)       # so the shell reloads it when it changes
+    except Exception:  # noqa: BLE001
+        d["logo"] = "generic"
+    return d
 
 
 def write_fastfetch(s, p):
@@ -1595,16 +1811,27 @@ def write_fastfetch(s, p):
     keyc = "1;38;2;" + rgb(p["accent2"])
     fg, bg = hex_to_rgb(p["termFg"]), hex_to_rgb(p["termBg"])
     dim = "38;2;" + rgb(rgb_to_hex(tuple(f * 0.55 + b * 0.45 for f, b in zip(fg, bg))))
-    arch = "arch" in distro_name().lower()
     mono = colorsys.rgb_to_hls(*hex_to_rgb(p["accent"]))[2] < 0.08
     logo_file = os.path.join(d, "bevel-logo.txt")
-    if arch:
-        cols = ({"A": (255, 255, 255), "a": (192, 192, 192), "n": (128, 128, 128)} if mono
-                else {"A": (91, 188, 240), "a": (23, 147, 209), "n": (11, 95, 138)})
-        logo = {"type": "file-raw", "source": logo_file, "width": len(ARCH_ART[0]), "height": (len(ARCH_ART) + 1) // 2,
-                "padding": {"top": 1, "left": 2, "right": 3}}
+    pad = {"top": 1, "left": 2, "right": 3}
+    # the logo: Bevel's pixel Arch, your distro's own logo turned into the same kind of pixel art,
+    # fastfetch's built-in text logo ("classic", or when no logo picture is installed), or none
+    di = distro_info(s)
+    art = None
+    if di["logo"] == "arch":
+        art = (ARCH_ART, {"A": (255, 255, 255), "a": (192, 192, 192), "n": (128, 128, 128)} if mono
+               else {"A": (91, 188, 240), "a": (23, 147, 209), "n": (11, 95, 138)})
+    elif di["logo"] == "system" and di["logoMode"] == "auto":
+        art = distro_pixels(di["logoFile"])
+        if art and mono:
+            art = (art[0], {k: (round(sum(v) / 3),) * 3 for k, v in art[1].items()})
+    if di["logo"] == "none":
+        logo = {"type": "none"}
+    elif art:
+        logo = {"type": "file-raw", "source": logo_file, "width": len(art[0][0]), "height": (len(art[0]) + 1) // 2,
+                "padding": pad}
     else:
-        logo = {"padding": {"top": 1, "left": 2, "right": 3}}
+        logo = {"padding": pad}
 
     def mod(t, key, **kw):
         m = {"type": t, "key": key}
@@ -1646,8 +1873,8 @@ def write_fastfetch(s, p):
         ],
     }
     text = "// bevel-generated — delete this line to keep your own edits (bevelctl will stop touching the file)\n" + json.dumps(cfg, indent=2, ensure_ascii=False) + "\n"
-    if arch:
-        write_atomic(logo_file, halfblock_art(ARCH_ART, cols))
+    if art:
+        write_atomic(logo_file, halfblock_art(*art))
     write_atomic(conf, text)
 
 
@@ -2928,6 +3155,10 @@ def write_sddm(s, p):
     lines = ["[General]", "background=background.png", "wallpaperSource=%s" % src_key,
              "dim=%s" % s.get("login", {}).get("dim", 0.55),
              "barFont=%s" % s["bar"].get("font", "JetBrains Mono")]
+    # the big name on the login banner: "Arch" + "Linux", "CachyOS" + "Linux", "EndeavourOS"…
+    full = distro_info(s)["fullName"].replace("\n", " ")
+    m = re.match(r"^(.*?)\s+((?:GNU/)?Linux)$", full)
+    lines += ["osName=%s" % (m.group(1) if m else full), "osSub=%s" % (m.group(2) if m else "none")]
     for k in ("face", "face2", "hi", "lo", "dark", "base", "text", "textDim", "accent", "accent2", "onAccent"):
         lines.append("%s=%s" % (k, p[k]))
     text = "\n".join(lines) + "\n"
@@ -3942,8 +4173,20 @@ def session():
             return None
 
     # apps started through D-Bus (e.g. "show in folder" opening Dolphin) must get the theme too
-    run(["dbus-update-activation-environment", "--systemd",
-         "QT_QPA_PLATFORMTHEME=%s" % qt_platform_theme(), "XDG_CURRENT_DESKTOP=Hyprland"])
+    systemd = os.path.isdir("/run/systemd/system")
+    run(["dbus-update-activation-environment"] + (["--systemd"] if systemd else []) +
+        ["QT_QPA_PLATFORMTHEME=%s" % qt_platform_theme(), "XDG_CURRENT_DESKTOP=Hyprland"])
+
+    # without systemd (Artix…) nothing starts the sound server for you
+    if not systemd:
+        r = run(["pgrep", "-x", "pipewire"])
+        if not (r and r.returncode == 0):
+            if shutil.which("artix-pipewire-launcher"):
+                spawn(["artix-pipewire-launcher"])
+            else:
+                for d in ("pipewire", "pipewire-pulse", "wireplumber"):
+                    if shutil.which(d):
+                        spawn([d])
 
     # other notification daemons would steal the notifications
     for d in ("mako", "dunst", "swaync", "xfce4-notifyd"):
@@ -4381,6 +4624,14 @@ def doctor():
     cmd(["hyprctl", "version"], 6)
     cmd(["qs", "--version"], 3)
     cmd(["uname", "-a"], 2)
+    sec("distro")
+    try:
+        di = distro_info()
+        out.append("%s (id %s, like %s) · logo %s %s · init %s" % (
+            di["pretty"], di["id"], " ".join(di["like"]) or "-", di["logo"], di["logoFile"] or "",
+            "systemd" if os.path.isdir("/run/systemd/system") else "not systemd"))
+    except Exception as e:  # noqa: BLE001
+        out.append(str(e))
     sec("hyprland config errors")
     cmd(["hyprctl", "configerrors"], 20)
     sec("files")
@@ -4647,7 +4898,10 @@ def main(argv):
     elif cmd == "restart-apps":
         restart_apps(tuple(args) or ("dolphin", "firefox"))
     elif cmd == "distro":
-        print(distro_name())
+        if args[:1] == ["--json"]:
+            print(json.dumps(distro_info(), indent=2))
+        else:
+            print(distro_name())
     elif cmd in ("flyout", "menu"):
         kind = args[0] if args else "clock"
         if kind not in FLYOUT_KINDS:

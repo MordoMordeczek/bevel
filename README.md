@@ -6,7 +6,7 @@
 
 <img alt="Hyprland 0.55+ (Lua)" src="https://img.shields.io/badge/Hyprland-0.55%2B%20%C2%B7%20Lua-db714d?style=flat-square&labelColor=2d1f1b">
 <img alt="Quickshell 0.3" src="https://img.shields.io/badge/Quickshell-0.3-db714d?style=flat-square&labelColor=2d1f1b">
-<img alt="Arch Linux" src="https://img.shields.io/badge/Arch-Linux-db714d?style=flat-square&labelColor=2d1f1b&logo=archlinux&logoColor=e8a791">
+<img alt="Arch and Arch-based" src="https://img.shields.io/badge/Arch-%26%20Arch--based-db714d?style=flat-square&labelColor=2d1f1b&logo=archlinux&logoColor=e8a791">
 <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-e8a791?style=flat-square&labelColor=2d1f1b">
 <img alt="Vibecoded by Claude" src="https://img.shields.io/badge/vibecoded-by%20Claude-ffd23f?style=flat-square&labelColor=2d1f1b">
 <img alt="Status: early" src="https://img.shields.io/badge/status-early%20%26%20experimental-be9e93?style=flat-square&labelColor=2d1f1b">
@@ -23,7 +23,7 @@
 > **Bevel is almost entirely vibecoded.** Nearly all of it was written by **Claude**, Anthropic's AI: the Quickshell shell, the `bevelctl` theme engine, the installer, the login screen, the pixel icons and pointers, the animated backgrounds, even this README. **[@MordoMordeczek](https://github.com/MordoMordeczek)** came up with it, steered it, and tested every build on a real laptop.
 >
 > So:
-> - It works on the machine it was made on (Arch, Hyprland 0.55 with the Lua config). Other GPUs, distros and setups are untested.
+> - It works on the machine it was made on (Arch, Hyprland 0.55 with the Lua config). Arch-based distros should work too, but other GPUs, distros and setups are mostly untested.
 > - No human has reviewed the code line by line. **Read `install.sh` before you run it.** It uses `sudo` for packages, the login screen and the pointer theme.
 > - Your old config is backed up to `~/.config/bevel-backup-<date>/`, and `./uninstall.sh` puts it back. Keep your own backup anyway.
 
@@ -85,7 +85,7 @@ Metro-style tiles: clock, calendar, system info, CPU/RAM, weather, sticky notes,
 Wallpaper browser for big folders, themes as shareable `.bevel` files, displays, dock, pointer, touchpad, keybinds, all in one 9x app.
 
 **🕹️ The fun stuff**<br>
-Screensavers, Tip of the Day, a start-up chime, an "I use Arch btw" badge, and Bevvy the desktop sheep.
+Screensavers, Tip of the Day, a start-up chime, an "I use *your distro* btw" badge, and Bevvy the desktop sheep.
 
 </td></tr>
 </table>
@@ -97,7 +97,7 @@ Also included: a Windows 95-style **setup wizard**, an **SDDM login screen** and
 ## 💾 Install
 
 > [!IMPORTANT]
-> For **Arch Linux** with **Hyprland 0.55+ using the Lua config** and **Quickshell 0.3**. The installer gets everything else through pacman.
+> For **Arch Linux and Arch-based distros** (CachyOS, EndeavourOS, Manjaro, Garuda, Artix…) with **Hyprland 0.55+ using the Lua config** and **Quickshell 0.3**. The installer gets everything else through pacman, and from the AUR (with paru or yay) if your distro's repos lack something Bevel needs. [More about distros](docs/MANUAL.md#your-distro).
 
 ```sh
 git clone https://github.com/MordoMordeczek/bevel.git

@@ -228,8 +228,8 @@ Rectangle {
                         spacing: 2 * root.s
                         Row {
                             spacing: 8 * root.s
-                            Text { text: "Arch"; color: "#f4f4f4"; font.features: { "liga": 0, "clig": 0, "dlig": 0, "calt": 0 }; font.family: root.uiFont; font.bold: true; font.pixelSize: 34 * root.s }
-                            Text { text: "Linux"; color: pal.accent2; font.features: { "liga": 0, "clig": 0, "dlig": 0, "calt": 0 }; font.family: root.uiFont; font.pixelSize: 34 * root.s }
+                            Text { text: root.cfg("osName", "Arch"); color: "#f4f4f4"; font.features: { "liga": 0, "clig": 0, "dlig": 0, "calt": 0 }; font.family: root.uiFont; font.bold: true; font.pixelSize: 34 * root.s }
+                            Text { text: root.cfg("osSub", "Linux") === "none" ? "" : root.cfg("osSub", "Linux"); visible: text !== ""; color: pal.accent2; font.features: { "liga": 0, "clig": 0, "dlig": 0, "calt": 0 }; font.family: root.uiFont; font.pixelSize: 34 * root.s }
                         }
                         Text { text: "Hyprland · Bevel edition"; color: Qt.rgba(1, 1, 1, 0.65); font.features: { "liga": 0, "clig": 0, "dlig": 0, "calt": 0 }; font.family: root.uiFont; font.pixelSize: 13 * root.s }
                     }

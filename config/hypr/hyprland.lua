@@ -35,7 +35,8 @@ hl.env("GDK_SCALE", "1")
 -------------------
 hl.on("hyprland.start", function ()
     hl.exec_cmd("bevelctl session")     -- wallpaper daemon, theme, Quickshell (log: ~/.cache/bevel/session.log)
-    hl.exec_cmd("systemctl --user start hyprpolkitagent")
+    -- systemd starts the polkit agent as a user service; without systemd (Artix…) run it directly
+    hl.exec_cmd("systemctl --user start hyprpolkitagent 2>/dev/null || /usr/lib/hyprpolkitagent/hyprpolkitagent")
 end)
 
 -----------------------------------------

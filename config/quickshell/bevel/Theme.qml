@@ -90,7 +90,16 @@ Singleton {
     readonly property string saver: sv("fun.screensaver", "starfield")
     readonly property int saverMinutes: sv("fun.saverMinutes", 10)
     readonly property bool loadingScreen: sv("style.loadingScreen", true)
-    property string distro: "Linux"
+    // your distro: bevelctl puts it in colors.json (with the Settings → Fun overrides and the logo);
+    // /etc/os-release is the fallback until it has
+    property string osName: "Linux"
+    property string osId: "linux"
+    readonly property var distroInfo: c && c.distro ? c.distro : ({})
+    readonly property string distro: distroInfo.name || osName
+    readonly property string distroId: distroInfo.id || osId
+    // arch (Bevel's pixel Arch) · system (your distro's logo as pixel art) · generic (a 9x computer) · none
+    readonly property string distroLogo: distroInfo.logo || (osId === "arch" ? "arch" : "generic")
+    readonly property string distroLogoPng: distroInfo.logoPng ? "file://" + distroInfo.logoPng + "?" + (distroInfo.logoStamp || 0) : ""
     FileView {
         id: osRelease
         path: "/etc/os-release"
@@ -99,8 +108,11 @@ Singleton {
         onLoaded: root.parseDistro()
     }
     function parseDistro() {
-        const m = (osRelease.text() || "").match(/^NAME="?([^"\n]+)"?/m);
-        if (m) root.distro = m[1].replace(" GNU/Linux", "").replace(" Linux", "").trim() || "Linux";
+        const t = osRelease.text() || "";
+        const m = t.match(/^NAME=["']?([^"'\n]+)["']?/m);
+        if (m) root.osName = m[1].replace(/\s+(GNU\/)?Linux$/, "").trim() || "Linux";
+        const i = t.match(/^ID=["']?([^"'\n]+)["']?/m);
+        if (i) root.osId = i[1].toLowerCase();
     }
 
     // ---- wallpaper: a picture, or a live (animated) background

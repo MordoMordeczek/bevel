@@ -274,7 +274,6 @@ Item {
             readonly property var f: Info.fetch
             readonly property var s: Info.sys
             readonly property bool ready: Object.keys(f).length > 0
-            readonly property bool isArch: ((f.os || Theme.distro) + "").toLowerCase().indexOf("arch") >= 0
             readonly property bool mono: Theme.accent.hslSaturation < 0.08        // black & white looks
             function shortCpu(c) {
                 return (c || "").replace(/\((R|TM)\)/g, "").replace(/ with .*Graphics/, "").replace(/^(AMD|Intel) /, "")
@@ -294,27 +293,21 @@ Item {
             readonly property int fs: Math.max(13, Math.min(16, Math.round(height / 11)))
             readonly property int lineH: Math.round(fs * 1.2)
             readonly property int fit: Math.max(1, Math.floor((height - lineH * 1.6 - 8 - lineH * 0.9) / lineH))
-            readonly property bool showLogo: width >= 260 && height >= 70
+            readonly property bool showLogo: width >= 260 && height >= 70 && Theme.distroLogo !== "none"
             // whole multiples of the 32px art keep it crisp
             readonly property int logoSize: {
                 const m = Math.min(height - 6, width * 0.3);
                 return m >= 64 ? Math.floor(m / 32) * 32 : Math.max(32, Math.floor(m / 16) * 16);
             }
 
-            ArchLogo {
+            DistroLogo {
                 id: logo
-                visible: ff.showLogo && ff.isArch
+                visible: ff.showLogo
                 anchors.verticalCenter: parent.verticalCenter
                 x: 2
                 width: ff.logoSize; height: ff.logoSize
-                // Arch blue, or white on the coloured tiles where blue would clash
+                // the logo's own colours, or one colour on the coloured tiles where they would clash
                 tint: ff.mono || w.look === "tiles" ? w.fg : "transparent"
-            }
-            PixIcon {
-                visible: ff.showLogo && !ff.isArch
-                anchors.centerIn: logo
-                kind: "monitor"
-                zoom: Math.max(1, Math.floor(ff.logoSize / 16))
             }
             Column {
                 id: info
@@ -401,16 +394,11 @@ Item {
             RowLayout {
                 anchors.fill: parent
                 spacing: 8
-                ArchLogo {
-                    visible: w.cw >= 2 && parent.parent.distro.toLowerCase().indexOf("arch") >= 0
+                DistroLogo {
+                    visible: w.cw >= 2 && shown
                     Layout.preferredWidth: w.u * 0.6 >= 64 ? Math.floor(w.u * 0.6 / 32) * 32 : 32
                     Layout.preferredHeight: Layout.preferredWidth
                     tint: Theme.accent.hslSaturation < 0.08 || w.look === "tiles" ? w.fg : "transparent"
-                }
-                PixIcon {
-                    visible: w.cw >= 2 && parent.parent.distro.toLowerCase().indexOf("arch") < 0
-                    kind: "monitor"
-                    zoom: Math.max(1, Math.floor(w.u * 0.5 / 16))
                 }
                 Column {
                     Layout.fillWidth: true

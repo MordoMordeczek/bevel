@@ -149,7 +149,7 @@ ShellRoot {
                         spacing: 8
                         Tip { icon: "moon"; text: "<b>Screensavers</b> — Starfield, Mystify and Pipes" + (" (Super+Shift+Z).") }
                         Tip { icon: "user"; text: "<b>Bevvy the sheep</b> — a desktop pet. Settings → Fun. Click it." }
-                        Tip { icon: "arch"; text: "<b>I use … btw</b> — a badge for the bar and a widget, for the important things in life." }
+                        Tip { icon: Theme.distroLogo === "arch" ? "arch" : "monitor"; text: "<b>I use … btw</b> — a badge for the bar and a widget, for the important things in life." }
                         Tip { icon: "key"; text: "In the launcher, try typing <i>party</i>, <i>fortune</i> or an old cheat code. And click the logo on Settings → About." }
                         Item { Layout.fillHeight: true }
                     }

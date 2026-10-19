@@ -24,9 +24,9 @@ Scope {
     readonly property var actions: [
         { label: "Lock", icon: "lock", cmd: ["hyprlock"] },
         { label: "Log out", icon: "logout", cmd: ["sh", "-c", "command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch 'hl.dsp.exit()'"] },
-        { label: "Suspend", icon: "suspend", cmd: ["sh", "-c", "(hyprlock &) ; sleep 0.6 ; systemctl suspend"] },
-        { label: "Restart", icon: "restart", cmd: ["systemctl", "reboot"], bye: "Please wait while your\ncomputer restarts…" },
-        { label: "Shut down", icon: "shutdown", cmd: ["systemctl", "poweroff"], bye: "It's now safe to turn off\nyour computer." }
+        { label: "Suspend", icon: "suspend", cmd: ["sh", "-c", "(hyprlock &) ; sleep 0.6 ; systemctl suspend 2>/dev/null || loginctl suspend"] },
+        { label: "Restart", icon: "restart", cmd: ["sh", "-c", "systemctl reboot 2>/dev/null || loginctl reboot"], bye: "Please wait while your\ncomputer restarts…" },
+        { label: "Shut down", icon: "shutdown", cmd: ["sh", "-c", "systemctl poweroff 2>/dev/null || loginctl poweroff"], bye: "It's now safe to turn off\nyour computer." }
     ]
 
     function run(a) {

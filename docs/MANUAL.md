@@ -30,6 +30,7 @@ Everything Bevel does, page by page. Back to the [README](../README.md).
 - [Bevel Settings](#bevel-settings)
 - [Hyprland desktop styles](#hyprland-desktop-styles)
 - [Fun](#fun)
+- [Your distro](#your-distro)
 - [Where things live](#where-things-live)
 - [Firefox](#firefox)
 - [Login screen](#login-screen)
@@ -48,7 +49,7 @@ cd bevel
 
 The installer is a Windows 95-style setup wizard. Pick the login screen, retro icons, the starting wallpaper and the apps, then press Install. pacman asks for your password once and the rest runs by itself. A short **Welcome tour** opens the first time you log in (Super+F1 shows every shortcut any time).
 
-> **Heads-up:** Bevel is a hobby project made and tested on one Arch Linux laptop. On other hardware some things might break or look wrong, especially with other GPUs, several monitors or an older Hyprland (it needs 0.55+ with the Lua config). Your config is backed up first and `./uninstall.sh` puts it back. If something breaks, Super+I → About → **Make a bug report** collects what's needed.
+> **Heads-up:** Bevel is a hobby project made and tested on one Arch Linux laptop (Arch-based distros should work too, see [Your distro](#your-distro)). On other hardware some things might break or look wrong, especially with other GPUs, several monitors or an older Hyprland (it needs 0.55+ with the Lua config). Your config is backed up first and `./uninstall.sh` puts it back. If something breaks, Super+I → About → **Make a bug report** collects what's needed.
 
 Your old files are copied to `~/.config/bevel-backup-<date>/` first, and `./uninstall.sh` puts them back.
 
@@ -241,7 +242,7 @@ While the wallpaper or colours change, a "Repainting your desktop" box covers th
 ## Fun
 
 These are in Super+I → Fun:
-- an "I use Arch btw" badge for the bar (click it) and a line in fastfetch
+- an "I use *your distro* btw" badge for the bar (click it) and a line in fastfetch
 - screensavers (Starfield, Mystify, Pipes) after a set idle time, or with Super+Shift+Z
 - a Windows-style Tip of the Day at login
 - an original start-up chime (`bevelctl chime`)
@@ -250,6 +251,16 @@ These are in Super+I → Fun:
 - something happens if you click the logo on the About page. Close the window it opens to make it stop.
 
 **Black & white wallpapers:** when the wallpaper has (almost) no colour, the whole desktop goes greyscale too: panels, accents, terminal and apps. Look & colors → "Black & white" can also force it on or off.
+
+## Your distro
+
+Bevel runs on **Arch Linux and the distros built on it**: CachyOS, EndeavourOS, Manjaro, Garuda, Artix and friends. Setup needs pacman, so Fedora, Debian and others can't run it (yet).
+
+- **Names and logos follow your distro.** fastfetch, the System info and "btw" widgets, the bar badge, the Start menu banner and the login screen read `/etc/os-release`, so on CachyOS it's "I use CachyOS btw" and the login screen says CachyOS Linux.
+- **The logo:** on Arch it's Bevel's hand-drawn pixel Arch. On other distros Bevel takes the logo picture your distro installs (the `LOGO` from `/etc/os-release`, found in `/usr/share/pixmaps` or the hicolor icons) and turns it into 32×32 pixel art in a few flat colours with a 9x bevel, for both the widgets and fastfetch. If there's no picture, the widgets show a little 9x computer and fastfetch uses its own logo.
+- **Change it:** Super+I → Fun → **Your distro**. Type a different name, or pick the logo: *Auto*, *Bevel's pixel Arch* (for everyone who misses it), *Classic fastfetch* (fastfetch's built-in text logo) or *None*. `bevelctl distro --json` shows what Bevel detected.
+- **Packages your repos don't have:** Setup installs what it can with pacman. If something Bevel can't run without (Quickshell, Hyprland and its tools) is missing from your distro's repos, Setup builds it from the AUR with `paru` or `yay` when you have one; otherwise it tells you what to install. Manjaro's stable branch can be behind Arch, so check that your Hyprland is 0.55 or newer.
+- **No systemd (Artix):** Setup adds the `-openrc`, `-runit`, `-dinit` or `-s6` service packages, switches Bluetooth and power modes on for your init system, and shows the command to make SDDM your login manager instead of changing it for you. The shut-down menu uses `loginctl` when there's no `systemctl`, the polkit agent starts directly, and Bevel starts PipeWire at login.
 
 ## Where things live
 

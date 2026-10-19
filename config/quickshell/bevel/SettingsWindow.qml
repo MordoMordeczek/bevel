@@ -1228,6 +1228,51 @@ Scope {
                                                     width: parent.width
                                                     spacing: 14
                                                     SGroup {
+                                                        title: "Your distro"
+                                                        RowLayout {
+                                                            spacing: 12
+                                                            Bevel {
+                                                                implicitWidth: 76; implicitHeight: 76
+                                                                sunken: true
+                                                                fill: Theme.base
+                                                                radius: Theme.radiusSm
+                                                                DistroLogo { anchors.centerIn: parent; width: 64; height: 64 }
+                                                                BText { anchors.centerIn: parent; visible: Theme.distroLogo === "none"; text: "no logo"; color: Theme.textDim }
+                                                            }
+                                                            BText {
+                                                                Layout.fillWidth: true
+                                                                text: "Bevel shows <b>" + Theme.distro + "</b> in fastfetch, the System info and \"btw\" widgets, the badge and the login screen."
+                                                                      + (Theme.distroInfo.pretty ? "<br>Detected: " + Theme.distroInfo.pretty : "")
+                                                                textFormat: Text.StyledText
+                                                                wrapMode: Text.Wrap
+                                                                maximumLineCount: 4
+                                                                elide: Text.ElideNone
+                                                            }
+                                                        }
+                                                        SField {
+                                                            text: "Name"
+                                                            value: Theme.sv("fun.distroName", "")
+                                                            onAccepted: t => Theme.set("fun.distroName", t.trim())
+                                                        }
+                                                        SChoice {
+                                                            text: "Logo"
+                                                            model: [{ label: "Auto", value: "auto" }, { label: "Bevel's pixel Arch", value: "arch" },
+                                                                    { label: "Classic fastfetch", value: "classic" }, { label: "None", value: "none" }]
+                                                            current: Theme.sv("fun.distroLogo", "auto")
+                                                            onPicked: v => Theme.set("fun.distroLogo", v)
+                                                        }
+                                                        BText {
+                                                            Layout.fillWidth: true
+                                                            text: "Leave the name empty to use " + (Theme.distroInfo.detected || Theme.osName) + " (from /etc/os-release); press Enter to save. "
+                                                                  + "Auto draws your distro's own logo as 9x pixel art (Bevel's hand-made one on Arch). "
+                                                                  + "Classic uses fastfetch's built-in text logo in the terminal."
+                                                            color: Theme.textDim
+                                                            wrapMode: Text.Wrap
+                                                            maximumLineCount: 4
+                                                            elide: Text.ElideNone
+                                                        }
+                                                    }
+                                                    SGroup {
                                                         title: "\"" + Theme.btwLabel + "\""
                                                         SCheck { visible: !root.xfce; text: "Show it on the bar (click it for a reply)"; checked: Theme.btw; onToggled: v => Theme.set("fun.btw", v) }
                                                         SCheck { text: "Add it to fastfetch"; checked: Theme.sv("fun.btwFastfetch", true); onToggled: v => Theme.set("fun.btwFastfetch", v) }

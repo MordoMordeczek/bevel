@@ -2,6 +2,15 @@
 
 All notable changes to Bevel. Dates are when a build was pushed here.
 
+## 0.2.0 · 2026-10-20 · Arch-based distros
+
+- **Your distro, not just Arch.** fastfetch, the System info and "btw" widgets, the bar badge, the Start menu and the login screen now show the distro you actually run: "I use CachyOS btw", "EndeavourOS" on the login screen, and so on.
+- **Pixel logos for every distro.** On Arch it's still Bevel's hand-drawn pixel Arch. Elsewhere Bevel turns the logo your distro installs into 32×32 9x-style pixel art, for the widgets and fastfetch alike.
+- **Settings → Fun → Your distro:** change the name, or pick the logo (Auto, Bevel's pixel Arch, classic fastfetch, none). `bevelctl distro --json` shows what was detected.
+- **Setup on Arch-based distros:** it names your distro, and builds Quickshell or Hyprland pieces from the AUR (paru or yay) when your repos don't have them. It also installs `librsvg` for the logos.
+- **No systemd needed (Artix):** service packages and services for OpenRC, runit, dinit and s6; the shut-down menu falls back to `loginctl`; polkit and PipeWire start without systemd user services.
+- The bug report now says which distro and init system you run.
+
 ## 0.1.0 · 2026-10-19 · first upload
 
 Bevel had been passed around as tarballs while it was being built. This is the first version on GitHub, still private.

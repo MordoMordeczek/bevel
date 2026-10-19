@@ -30,7 +30,31 @@ for a in "$@"; do
 done
 
 [ "$(id -u)" -eq 0 ] && { echo "Run this as your normal user, not root."; exit 1; }
-command -v pacman >/dev/null || { echo "This installer is for Arch Linux (pacman not found)."; exit 1; }
+# ---- which distro: Arch, or one built on it (CachyOS, EndeavourOS, Manjaro, Garuda, Artix…)
+DISTRO_ID=arch DISTRO_NAME="Arch Linux" DISTRO_LIKE=""
+if [ -r /etc/os-release ]; then
+    DISTRO_ID="$(. /etc/os-release 2>/dev/null; echo "${ID:-arch}")"
+    DISTRO_NAME="$(. /etc/os-release 2>/dev/null; echo "${NAME:-Arch Linux}")"
+    DISTRO_LIKE="$(. /etc/os-release 2>/dev/null; echo "${ID_LIKE:-}")"
+fi
+DISTRO_SHORT="${DISTRO_NAME% GNU/Linux}"; DISTRO_SHORT="${DISTRO_SHORT% Linux}"
+if ! command -v pacman >/dev/null; then
+    echo "Bevel Setup installs with pacman, so it runs on Arch Linux and the distros built on it"
+    echo "(CachyOS, EndeavourOS, Manjaro, Garuda, Artix and friends). $DISTRO_NAME isn't one of them yet."
+    exit 1
+fi
+# ---- the init system: systemd almost everywhere; Artix also comes with OpenRC, runit, dinit or s6
+INIT=systemd
+if [ ! -d /run/systemd/system ]; then
+    if command -v rc-service >/dev/null; then INIT=openrc
+    elif command -v dinitctl >/dev/null; then INIT=dinit
+    elif command -v s6-rc >/dev/null; then INIT=s6
+    elif [ -d /run/runit ] || command -v sv >/dev/null; then INIT=runit
+    else INIT=unknown; fi
+fi
+# an AUR helper, for the few packages a distro's own repos might not have yet
+AUR=""
+for h in paru yay pikaur trizen; do command -v "$h" >/dev/null && { AUR="$h"; break; }; done
 
 # ====================================================================== choices
 # components (1 = yes)
@@ -42,6 +66,8 @@ FRESH=1; [ -f "$CONFIG/bevel/settings.json" ] && FRESH=0
 WELCOME_WHAT="system: Hyprland with the Quickshell bar, widgets and a dock,"
 CUR_DM=""
 [ -L /etc/systemd/system/display-manager.service ] && CUR_DM="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)")"
+# without systemd, Setup installs the login screen but shows how to switch to it rather than doing it
+[ "$INIT" != systemd ] && ON[sddm_dm]=0
 # keep the login manager you have unless it is already SDDM or there is none
 [ -n "$CUR_DM" ] && [ "$CUR_DM" != "sddm.service" ] && ON[sddm_dm]=0
 
@@ -276,7 +302,9 @@ app_items() {
 
 wizard() {
     local page=0 dm_label
-    if [ -z "$CUR_DM" ]; then dm_label="Use it as my login manager (none is set up yet)"
+    if [ "$INIT" = unknown ]; then dm_label="Show me how to make it my login manager"
+    elif [ "$INIT" != systemd ]; then dm_label="Show me how to make it my login manager ($INIT)"
+    elif [ -z "$CUR_DM" ]; then dm_label="Use it as my login manager (none is set up yet)"
     elif [ "$CUR_DM" = "sddm.service" ]; then dm_label="Use it as my login manager (SDDM already is)"
     else dm_label="Use it as my login manager (now: ${CUR_DM%.service})"; fi
     mapfile -t app_list < <(app_items)
@@ -286,7 +314,7 @@ wizard() {
         0)  page_text "Welcome" "Next >" \
                 "" \
                 "   ██▄  ██▀  █ █  ██▀  █" \
-                "   █▄█  █▄▄  ▀▄▀  █▄▄  █▄▄      9x-flavoured rice for Arch" \
+                "   █▄█  █▄▄  ▀▄▀  █▄▄  █▄▄      9x-flavoured rice for $DISTRO_SHORT" \
                 "" \
                 "Welcome to Bevel Setup. This wizard puts the Bevel look on your" \
                 "$WELCOME_WHAT" \
@@ -302,6 +330,12 @@ wizard() {
             if [ -z "$hv" ]; then hnote="Hyprland isn't installed yet — Setup can install it."
             elif [ "$(printf '%s\n0.55\n' "$hv" | sort -V | head -1)" != "0.55" ]; then hnote="Your Hyprland is $hv — Bevel needs 0.55 or newer (Lua config)."
             else hnote="Your Hyprland is $hv — good."; fi
+            local notes=("  • $hnote")
+            [ "$DISTRO_ID" != arch ] && notes+=("  • You're on $DISTRO_SHORT, which is built on Arch: it should work.")
+            if [ "$INIT" = unknown ]; then notes+=("  • No systemd found: you may have to switch services on yourself.")
+            elif [ "$INIT" != systemd ]; then notes+=("  • No systemd here: services are set up for $INIT instead."); fi
+            local tail=("" "Press ENTER if that's OK with you.")
+            [ "${#notes[@]}" -gt 2 ] && tail=("Press ENTER if that's OK with you.")
             page_text "Before You Install" "I understand >" \
                 "" \
                 "Bevel is a hobby project, written almost entirely by Claude (an AI)" \
@@ -309,14 +343,12 @@ wizard() {
                 "might break or look wrong — especially with other graphics cards," \
                 "several monitors, or an older Hyprland." \
                 "" \
-                "  • $hnote" \
-                "  • Your config files are backed up first; ./uninstall.sh puts" \
-                "    them back." \
+                "${notes[@]}" \
+                "  • Your config is backed up first; ./uninstall.sh puts it back." \
                 "  • It replaces your Hyprland config (hyprland.lua; your own" \
                 "    tweaks go in user.lua) and kitty's colours." \
                 "  • Something broken? Super+I → About → Make a bug report." \
-                "" \
-                "Press ENTER if that's OK with you."
+                "${tail[@]}"
             if [ $? -eq 0 ]; then page=1; else page=0; fi ;;
         1)  local comp=(
                 "x|hypr|Bevel for Hyprland (always)|The bar, control panel, widgets, animations, Alt+Tab, clipboard, settings and themes. Needs Hyprland 0.55+."
@@ -410,13 +442,67 @@ pacman_install() {   # install what is missing; never stops the whole setup
         pacman -Q "$p" >/dev/null 2>&1 && continue
         if pacman -Si "$p" >/dev/null 2>&1 || pacman -Sg "$p" >/dev/null 2>&1; then want+=("$p"); else missing+=("$p"); fi
     done
-    [ "${#missing[@]}" -gt 0 ] && warn "not in your repos, skipped: ${missing[*]}"
-    [ "${#want[@]}" -eq 0 ] && { info "everything is already installed"; return 0; }
-    info "installing: ${want[*]}"
-    sudo pacman -S --needed --noconfirm "${want[@]}" || {
-        warn "pacman needs a decision from you — running it again with questions"
-        sudo pacman -S --needed "${want[@]}" || warn "some packages were not installed"
-    }
+    local core=() rest=()
+    for p in "${missing[@]}"; do
+        case " $CORE_PKGS " in *" $p "*) core+=("$p") ;; *) rest+=("$p") ;; esac
+    done
+    [ "${#rest[@]}" -gt 0 ] && warn "not in your repos, skipped: ${rest[*]}"
+    if [ "${#want[@]}" -gt 0 ]; then
+        info "installing: ${want[*]}"
+        sudo pacman -S --needed --noconfirm "${want[@]}" || {
+            warn "pacman needs a decision from you — running it again with questions"
+            sudo pacman -S --needed "${want[@]}" || warn "some packages were not installed"
+        }
+    elif [ "${#core[@]}" -eq 0 ]; then
+        info "everything is already installed"
+    fi
+    # Bevel can't run without these; some Arch-based distros don't carry them (yet), the AUR does
+    if [ "${#core[@]}" -gt 0 ]; then
+        if [ -n "$AUR" ]; then
+            info "not in your repos: ${core[*]} — building them from the AUR with $AUR (this can take a while)"
+            "$AUR" -S --needed --noconfirm "${core[@]}" || warn "$AUR couldn't install: ${core[*]}"
+        else
+            warn "not in your repos: ${core[*]} — Bevel needs them. Install them from the AUR (with paru or yay), then run Setup again."
+        fi
+    fi
+}
+# what Bevel can't do without (fetched from the AUR when the repos don't have them)
+CORE_PKGS="quickshell hyprland hyprlock hypridle hyprpolkitagent xdg-desktop-portal-hyprland hyprsunset awww swww cliphist"
+
+# ---- services, on whatever init you have
+svc_enable() {   # svc_enable NAME [OTHER_NAME…]: enable and start the first one this system has
+    local n
+    for n in "$@"; do
+        case "$INIT" in
+            systemd) sudo systemctl enable --now "$n" >/dev/null 2>&1 && return 0 ;;
+            openrc)  [ -e "/etc/init.d/$n" ] || continue
+                     sudo rc-update add "$n" default >/dev/null 2>&1; sudo rc-service "$n" start >/dev/null 2>&1; return 0 ;;
+            runit)   [ -d "/etc/runit/sv/$n" ] || continue
+                     [ -e "/run/runit/service/$n" ] || sudo ln -s "/etc/runit/sv/$n" /run/runit/service/ >/dev/null 2>&1; return 0 ;;
+            dinit)   [ -e "/etc/dinit.d/$n" ] || continue
+                     sudo dinitctl enable "$n" >/dev/null 2>&1; return 0 ;;
+            s6)      sudo s6-service add default "$n" >/dev/null 2>&1 || continue
+                     sudo s6-db-reload >/dev/null 2>&1; return 0 ;;
+        esac
+    done
+    return 1
+}
+svc_enabled() {   # svc_enabled NAME [OTHER_NAME…]
+    local n
+    for n in "$@"; do
+        case "$INIT" in
+            systemd) systemctl is-enabled "$n" >/dev/null 2>&1 && return 0 ;;
+            openrc)  rc-update show default 2>/dev/null | grep -qw "$n" && return 0 ;;
+            runit)   [ -e "/run/runit/service/$n" ] && return 0 ;;
+            dinit)   [ -e "/etc/dinit.d/boot.d/$n" ] && return 0 ;;
+        esac
+    done
+    return 1
+}
+init_pkgs() {   # Artix ships service files as <package>-<init>; print the ones that exist
+    [ "$INIT" = systemd ] || [ "$INIT" = unknown ] && return 0
+    local p
+    for p in "$@"; do pacman -Si "$p-$INIT" >/dev/null 2>&1 && echo "$p-$INIT"; done
 }
 
 backup() {
@@ -442,7 +528,7 @@ if [ "$PKGS" = 1 ]; then
         qt6ct qt6-svg qt6-imageformats breeze-icons kio-extras
         pipewire wireplumber pipewire-pulse brightnessctl playerctl
         networkmanager upower libnotify bluez bluez-utils cava xdg-desktop-portal-gtk
-        noto-fonts ttf-jetbrains-mono fontconfig curl fastfetch git btop qt6-shadertools
+        noto-fonts ttf-jetbrains-mono fontconfig curl fastfetch git btop qt6-shadertools librsvg
     )
     if [ "${ON[hypr]}" = 1 ]; then
         pkgs+=(hyprland hyprlock hypridle hyprpolkitagent xdg-desktop-portal-hyprland hyprsunset
@@ -454,9 +540,11 @@ if [ "$PKGS" = 1 ]; then
     NEW_PPD=0
     if ! pacman -Q tlp >/dev/null 2>&1 && ! pacman -Q power-profiles-daemon >/dev/null 2>&1; then pkgs+=(power-profiles-daemon); NEW_PPD=1; fi
     pkgs+=("${APP_PKGS[@]}")
+    mapfile -t extra < <(init_pkgs "${pkgs[@]}")
+    pkgs+=("${extra[@]}")
     pacman_install "${pkgs[@]}"
-    [ "$NEW_PPD" = 1 ] && pacman -Q power-profiles-daemon >/dev/null 2>&1 && sudo systemctl enable --now power-profiles-daemon >/dev/null 2>&1
-    pacman -Q bluez >/dev/null 2>&1 && ! systemctl is-enabled bluetooth >/dev/null 2>&1 && sudo systemctl enable --now bluetooth >/dev/null 2>&1
+    [ "$NEW_PPD" = 1 ] && pacman -Q power-profiles-daemon >/dev/null 2>&1 && svc_enable power-profiles-daemon
+    pacman -Q bluez >/dev/null 2>&1 && ! svc_enabled bluetooth bluetoothd && svc_enable bluetooth bluetoothd
 else
     info "rice packages skipped (--no-pkgs)"
     # apps you ticked in the wizard are still installed: ticking one means "I want it"
@@ -652,7 +740,18 @@ if [ "${ON[sddm]}" = 1 ]; then
             printf '[Theme]\nCurrent=bevel\n' | sudo tee /etc/sddm.conf.d/bevel.conf >/dev/null
         fi
         info "theme installed (follows your wallpaper colours)"
-        if [ "${ON[sddm_dm]}" = 1 ] && [ "$CUR_DM" != "sddm.service" ]; then
+        if [ "$INIT" != systemd ]; then
+            if [ "${ON[sddm_dm]}" = 1 ] && ! svc_enabled sddm display-manager; then
+                info "to make SDDM your login manager on $INIT (switch off the old one first):"
+                case "$INIT" in
+                    openrc) info "  set DISPLAYMANAGER=\"sddm\" in /etc/conf.d/display-manager, then: sudo rc-update add display-manager default" ;;
+                    runit)  info "  sudo ln -s /etc/runit/sv/sddm /run/runit/service/" ;;
+                    dinit)  info "  sudo dinitctl enable sddm" ;;
+                    s6)     info "  sudo s6-service add default sddm && sudo s6-db-reload" ;;
+                    *)      info "  enable the sddm service the way your init system does it" ;;
+                esac
+            fi
+        elif [ "${ON[sddm_dm]}" = 1 ] && [ "$CUR_DM" != "sddm.service" ]; then
             [ -n "$CUR_DM" ] && sudo systemctl disable "$CUR_DM" >/dev/null 2>&1
             sudo systemctl enable sddm.service >/dev/null 2>&1 && info "SDDM is your login manager from the next boot"
         fi
