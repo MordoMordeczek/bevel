@@ -2,6 +2,11 @@
 
 All notable changes to Bevel. Dates are when a build was pushed here.
 
+## 0.3.1 · 2026-10-20 · Setup on fresh systems
+
+- **Setup updates the system first.** Before installing packages it switches on network time, refreshes the package keys (`archlinux-keyring`, and your distro's own) and runs `pacman -Syu`, so packages match the system instead of failing on a fresh or long-offline install. `--no-upgrade` skips it.
+- **Clearer pacman errors.** When pacman calls packages "corrupted" (a signature problem) or can't download them, Setup says what that means and how to fix it.
+
 ## 0.3.0 · 2026-10-20 · keyboard layouts, updates, config buttons
 
 - **Keyboard layouts.** No more fixed US layout. Setup takes yours from the system, and Settings → Keyboard & touchpad sets one or more layouts (`us,pl`), a variant, and the keys that switch between them.

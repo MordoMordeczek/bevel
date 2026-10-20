@@ -59,8 +59,9 @@ Your old files are copied to `~/.config/bevel-backup-<date>/` first, and `./unin
 | `./install.sh --no-pkgs` | Update the config without reinstalling the rice's packages (apps you tick are still installed) |
 | `./install.sh --yes` | No wizard: everything plus the recommended apps |
 | `./install.sh --update` | Install a newer version over this one: no wizard, no packages, your earlier choices kept |
+| `./install.sh --no-upgrade` | Don't run a system update (`pacman -Syu`) before installing packages |
 
-Setup takes your keyboard layout from the system (`localectl`) and lets Hyprland pick a display scale that fits your screen. Change either one in Super+I.
+Before it installs anything, Setup switches on network time (package signatures need a correct clock), refreshes the package keys and updates the whole system with `pacman -Syu`, the way Arch expects; `--no-upgrade` skips that. Setup takes your keyboard layout from the system (`localectl`) and lets Hyprland pick a display scale that fits your screen. Change either one in Super+I.
 
 **Updating:** `bevelctl update`, or Super+I → About → **Check for updates** → **Update now**. It runs `git pull` in the folder you installed from, then `./install.sh --update`. Your settings, wallpapers, `user.lua` and kitty's `user.conf` stay as they are. If you changed Bevel's own files in that folder, it stops and tells you; put your changes in `user.lua` instead. Installed from a download rather than git? Clone it once (`git clone https://github.com/MordoMordeczek/bevel.git ~/bevel`), run `./install.sh --update` from there, and `bevelctl update` works from then on.
 
@@ -329,6 +330,8 @@ bevelctl patch '{"widgets.cols": 5}'                # change settings the way th
 ```
 
 ## Troubleshooting
+
+- **pacman says packages are "invalid or corrupted (PGP signature)":** they aren't broken; their signatures didn't check out, which happens with a wrong clock or old package keys (typical for a fresh install or a VM that was offline). Run `sudo timedatectl set-ntp true`, then `sudo pacman -Sy archlinux-keyring && sudo pacman -Syu` (on CachyOS, EndeavourOS and co. their own `…-keyring` too), then `./install.sh` again. Setup tries this itself and explains it when it fails.
 
 - **Animated background stays black:** the line under the preview in Super+I → Wallpaper → Animated says what's drawing it and whether the shader file was found. `bevelctl doctor live` prints everything that matters (shader files, Qt and driver versions, render backend, the shell's shader log lines). Please send that along.
 

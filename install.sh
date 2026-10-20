@@ -8,6 +8,7 @@
 #   ./install.sh --yes        no wizard, install the recommended set
 #   ./install.sh --update     install a newer Bevel over this one: no wizard, no packages, your
 #                             choices from last time are kept (`bevelctl update` runs this)
+#   ./install.sh --no-upgrade don't update the system (pacman -Syu) before installing packages
 #
 # Everything it replaces is copied to ~/.config/bevel-backup-<date>/ first;
 # ./uninstall.sh puts it back.
@@ -21,10 +22,12 @@ PKGS=1
 ASSUME_YES=0
 APPS_ONLY=0
 UPDATE=0
+SYSUPGRADE=1
 
 for a in "$@"; do
     case "$a" in
         --update) UPDATE=1 ;;
+        --no-upgrade) SYSUPGRADE=0 ;;
         --no-pkgs) PKGS=0 ;;
         --yes|-y) ASSUME_YES=1 ;;
         --apps) APPS_ONLY=1 ;;
@@ -402,6 +405,7 @@ wizard() {
                 lines+=("  • Apps: ${wrapped[0]}")
                 for a in "${wrapped[@]:1}"; do lines+=("          $a"); done
             fi
+            [ "$PKGS" = 1 ] && [ "$SYSUPGRADE" = 1 ] && lines+=("  • A system update first (pacman -Syu), so everything fits")
             lines+=("" "pacman will ask for your password once. Press ENTER to install.")
             page_text "Ready to Install" "Install" "${lines[@]}"
             if [ $? -eq 0 ]; then return 0; else page=3; fi ;;
@@ -453,6 +457,51 @@ echo
 if [ "$UPDATE" = 1 ]; then bold "  Updating Bevel to $(cat "$HERE/VERSION" 2>/dev/null || echo "the newest version")…"
 else bold "  Bevel Setup is installing. Sit back."; fi
 
+PACLOG="$(mktemp -t bevel-pacman.XXXXXX)"
+pacman_try() {   # sudo pacman ARGS --noconfirm, output also kept in $PACLOG to spot signature trouble
+    sudo pacman "$@" --noconfirm 2>&1 | tee -a "$PACLOG"
+    return "${PIPESTATUS[0]}"
+}
+explain_pacman() {   # turn pacman's scariest errors into words, once
+    [ -n "${EXPLAINED:-}" ] && return 0
+    if grep -qiE "invalid or corrupted package|signature .*(unknown trust|is invalid)|could not be looked up|key .* is disabled|corrupted \(PGP signature\)" "$PACLOG"; then
+        EXPLAINED=1
+        warn "pacman says the packages are \"corrupted\". They almost never are: their security signatures"
+        warn "didn't check out. The usual causes are a wrong clock or old package keys. To fix it:"
+        warn "    sudo timedatectl set-ntp true"
+        warn "    sudo pacman -Sy archlinux-keyring && sudo pacman -Syu   (plus your distro's own …-keyring)"
+        warn "then run ./install.sh again."
+    elif grep -qiE "failed retrieving file|404|could not resolve host|failed to synchronize" "$PACLOG"; then
+        EXPLAINED=1
+        warn "pacman couldn't download some packages: check your internet connection, or update your"
+        warn "mirror list (Arch: sudo pacman -S reflector, then reflector --latest 10 --sort rate --save /etc/pacman.d/mirrorlist)."
+    fi
+}
+SYS_READY=0
+prepare_pacman() {   # before installing anything: correct clock, fresh package keys, an up-to-date system
+    [ "$SYS_READY" = 1 ] && return 0
+    SYS_READY=1
+    # package signatures are checked against the clock, so a wrong one makes every package look corrupted
+    if [ "$INIT" = systemd ] && [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" != yes ]; then
+        sudo timedatectl set-ntp true >/dev/null 2>&1 && info "switched on network time (package signatures need a correct clock)"
+    fi
+    if [ "$SYSUPGRADE" = 0 ]; then
+        info "not updating the system first (--no-upgrade)"
+        return 0
+    fi
+    # the keyrings first (archlinux-keyring, cachyos-keyring, artix-keyring…): old ones reject new packages
+    local keys=()
+    mapfile -t keys < <(pacman -Qq 2>/dev/null | grep -E -- '-keyring$')
+    info "updating your system first (pacman -Syu), so the new packages fit what you have"
+    if [ "${#keys[@]}" -gt 0 ]; then
+        pacman_try -Sy --needed "${keys[@]}" >/dev/null || { explain_pacman; warn "couldn't update the package keys"; }
+    fi
+    pacman_try -Syu || {
+        warn "the update needs a decision from you — running it again with questions"
+        sudo pacman -Syu || { explain_pacman; warn "the system update didn't finish; Setup carries on, but packages may fail"; }
+    }
+}
+
 pacman_install() {   # install what is missing; never stops the whole setup
     local want=() missing=() p
     for p in "$@"; do
@@ -466,9 +515,9 @@ pacman_install() {   # install what is missing; never stops the whole setup
     [ "${#rest[@]}" -gt 0 ] && warn "not in your repos, skipped: ${rest[*]}"
     if [ "${#want[@]}" -gt 0 ]; then
         info "installing: ${want[*]}"
-        sudo pacman -S --needed --noconfirm "${want[@]}" || {
+        pacman_try -S --needed "${want[@]}" || {
             warn "pacman needs a decision from you — running it again with questions"
-            sudo pacman -S --needed "${want[@]}" || warn "some packages were not installed"
+            sudo pacman -S --needed "${want[@]}" || { explain_pacman; warn "some packages were not installed"; }
         }
     elif [ "${#core[@]}" -eq 0 ]; then
         info "everything is already installed"
@@ -534,11 +583,13 @@ backup() {
 
 if [ "$APPS_ONLY" = 1 ]; then
     step "Installing apps"
+    prepare_pacman
     pacman_install "${APP_PKGS[@]}"
 else
 # ---------------------------------------------------------------- packages
 step "Packages"
 if [ "$PKGS" = 1 ]; then
+    prepare_pacman
     pkgs=(
         quickshell kitty dolphin
         python python-pillow python-fonttools
@@ -565,7 +616,7 @@ if [ "$PKGS" = 1 ]; then
 else
     info "rice packages skipped (--no-pkgs)"
     # apps you ticked in the wizard are still installed: ticking one means "I want it"
-    [ "${#APP_PKGS[@]}" -gt 0 ] && pacman_install "${APP_PKGS[@]}"
+    [ "${#APP_PKGS[@]}" -gt 0 ] && { prepare_pacman; pacman_install "${APP_PKGS[@]}"; }
 fi
 
 # ---------------------------------------------------------------- backup
@@ -896,3 +947,4 @@ fi
 echo
 for ln in "${done_lines[@]}"; do echo "  $ln"; done
 echo
+rm -f "$PACLOG"

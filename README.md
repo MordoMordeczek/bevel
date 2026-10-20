@@ -113,6 +113,7 @@ The installer is a Windows 95-style wizard. Pick the login screen, retro icons, 
 | `./install.sh --no-pkgs` | Update the config only, without reinstalling the rice's packages |
 | `./install.sh --apps` | Just the apps page, to add apps later |
 | `./install.sh --yes` | No wizard: everything, plus the recommended apps |
+| `./install.sh --no-upgrade` | Skip the system update (`pacman -Syu`) Setup does before installing |
 | `./uninstall.sh` | Put your old config back |
 
 Setup takes your keyboard layout from the system and lets Hyprland pick a display scale that fits your screen; both can be changed in Super+I.
