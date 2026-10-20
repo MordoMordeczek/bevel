@@ -250,7 +250,7 @@ While the wallpaper or colours change, a "Repainting your desktop" box covers th
 These are in Super+I → Fun:
 - an "I use *your distro* btw" badge for the bar (click it) and a line in fastfetch
 - screensavers (Starfield, Mystify, Pipes) after a set idle time, or with Super+Shift+Z
-- a Windows-style Tip of the Day at login
+- a Windows-style Tip of the Day at login (off at first: Settings → Fun turns it on)
 - an original start-up chime (`bevelctl chime`)
 - Bevvy, a pixel desktop sheep. Click it.
 - in Super+R: `fortune`, `fetch`, `sheep`, `party`, `btw` … and an old cheat code

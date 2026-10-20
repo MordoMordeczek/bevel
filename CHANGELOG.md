@@ -6,6 +6,9 @@ All notable changes to Bevel. Dates are when a build was pushed here.
 
 The first version for everyone. Thanks to whoever tries it: bug reports are very welcome.
 - **Real screenshots** in the README, taken on a laptop running Bevel.
+- **Alt+Tab switches again.** Letting go of Alt closed the switcher but stayed on the old window: Bevel asked Hyprland to focus the new one while the switcher still held the keyboard. It now closes first and then focuses the exact window you picked.
+- **Only the Welcome tour after installing.** Tip of the Day is off until you turn it on (Settings → Fun).
+- The README and Setup say plainly that you install Bevel at your own risk, and the README says an XFCE version is coming.
 - **Themes reset the bar.** Applying a theme used to keep whatever you had added to the bar from before. Now a theme sets the whole bar: what it doesn't set goes back to the default, and Undo brings your old bar back. Your clock format and number of workspaces stay.
 - **Grey animated backgrounds give a grey desktop.** Picking grey (or another colour without any hue) for an animated background coloured the desktop pink. It now turns black and white, as a grey picture does.
 

@@ -357,9 +357,9 @@ wizard() {
             page_text "Before You Install" "I understand >" \
                 "" \
                 "Bevel is a hobby project, written almost entirely by Claude (an AI)" \
-                "and tested on ONE Arch Linux laptop. On your computer some things" \
-                "might break or look wrong — especially with other graphics cards," \
-                "several monitors, or an older Hyprland." \
+                "and tested on two computers. On yours some things might break or" \
+                "look wrong — especially with other graphics cards, several monitors" \
+                "or an older Hyprland. You install it at your own risk: no warranty." \
                 "" \
                 "${notes[@]}" \
                 "  • Your config is backed up first; ./uninstall.sh puts it back." \

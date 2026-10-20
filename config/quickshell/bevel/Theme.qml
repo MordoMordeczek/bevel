@@ -86,7 +86,7 @@ Singleton {
     // ---- fun
     readonly property bool btw: sv("fun.btw", false)
     readonly property string btwLabel: (sv("fun.btwText", "") || "").trim() !== "" ? sv("fun.btwText", "") : "I use " + distro + " btw"
-    readonly property bool tips: sv("fun.tips", true)
+    readonly property bool tips: sv("fun.tips", false)
     readonly property string saver: sv("fun.screensaver", "starfield")
     readonly property int saverMinutes: sv("fun.saverMinutes", 10)
     readonly property bool loadingScreen: sv("style.loadingScreen", true)

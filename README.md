@@ -27,6 +27,9 @@
 > - No human has reviewed the code line by line. **Read `install.sh` before you run it.** It uses `sudo` for packages, the login screen and the pointer theme.
 > - Your old config is backed up to `~/.config/bevel-backup-<date>/`, and `./uninstall.sh` puts it back. Keep your own backup anyway.
 
+> [!CAUTION]
+> **You install Bevel by your own choice and at your own risk.** It comes as is, with no warranty of any kind (see the [MIT license](LICENSE)). The authors aren't responsible if it breaks your system, your config or anything else, or if you lose data. If you're not comfortable with that, please don't install it.
+
 <br>
 
 ## 📸 Screenshots
@@ -52,10 +55,10 @@
     <td align="center"><sub><b>The bar, your way</b> · put any item anywhere, per layout</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/img/terminal-theme.png" alt="The Terminal theme: green on black islands, an ASCII art wallpaper"></td>
+    <td colspan="2"><img src="docs/img/terminal-theme.png" alt="A green-on-black look: island bar, an ASCII art wallpaper"></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><sub><b>Terminal</b> · one of the built-in themes, islands layout</sub></td>
+    <td colspan="2" align="center"><sub><b>Green screen</b> · a look put together in Settings in a few clicks, islands layout</sub></td>
   </tr>
 </table>
 
@@ -105,6 +108,9 @@ Also included: a Windows 95-style **setup wizard**, an **SDDM login screen** and
 
 > [!IMPORTANT]
 > For **Arch Linux and Arch-based distros** (CachyOS, EndeavourOS, Manjaro, Garuda, Artix…) with **Hyprland 0.55+ using the Lua config** and **Quickshell 0.3**. The installer gets everything else through pacman, and from the AUR (with paru or yay) if your distro's repos lack something Bevel needs. [More about distros](docs/MANUAL.md#your-distro).
+
+> [!NOTE]
+> **An XFCE version is on the way.** Bevel also has a classic retro XFCE desktop (taskbars, 9x windows, snapping, the same widgets and control panel) that can run next to the Hyprland one. It isn't in this repo yet: it will come in a later release, once it's ready.
 
 ```sh
 git clone https://github.com/MordoMordeczek/bevel.git

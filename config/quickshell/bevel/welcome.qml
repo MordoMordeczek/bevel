@@ -109,7 +109,7 @@ ShellRoot {
                         spacing: 10
                         Para { text: "Bevel is a 9x-flavoured desktop: square corners, raised edges and colours that come from your wallpaper. " }
                         Para { text: "This short tour shows where things are. Use the arrows or the buttons below; you can open it again any time from the menu (\"Welcome to Bevel\") or with Super+F1." }
-                        Tip { icon: "monitor"; text: "Bevel was made and tested on one laptop. If something looks wrong on yours, Bevel Settings → About → \"Make a bug report\" collects what's needed to fix it." }
+                        Tip { icon: "monitor"; text: "Bevel has only been tested on a couple of computers. If something looks wrong on yours, Bevel Settings → About → \"Make a bug report\" collects what's needed to fix it." }
                     }
                     // basics
                     ColumnLayout {

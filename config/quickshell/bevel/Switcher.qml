@@ -40,14 +40,27 @@ Scope {
         }
         return best;
     }
+    // The switcher holds the keyboard while it's open, and Hyprland won't hand focus to a window
+    // while a layer like that is still on screen. So it closes first, and the window is focused
+    // a moment later, by its exact address (two windows of one app can share a title).
+    property var picked: null
     function commit() {
         if (!root.open) return;
-        const w = root.wins[root.sel];
+        root.picked = root.wins[root.sel] || null;
         root.open = false;
-        if (!w) return;
-        const t = root.toplevelFor(w);
-        if (t) t.activate();
-        else Quickshell.execDetached(["bevelctl", "focus", w.address]);
+        if (root.picked) focusLater.restart();
+    }
+    Timer {
+        id: focusLater
+        interval: 40
+        onTriggered: {
+            const w = root.picked;
+            root.picked = null;
+            if (!w) return;
+            const t = root.toplevelFor(w);
+            if (t) t.activate();
+            Quickshell.execDetached(["bevelctl", "focus", w.address]);
+        }
     }
 
     Process {

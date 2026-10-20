@@ -158,7 +158,7 @@ DEFAULTS = {
         "btwFastfetch": True,       # and a line in fastfetch
         "distroName": "",           # empty = from /etc/os-release ("Arch", "CachyOS", …)
         "distroLogo": "auto",       # auto | arch (Bevel's pixel Arch) | classic (fastfetch's own) | none
-        "tips": True,               # Tip of the Day at login
+        "tips": False,              # Tip of the Day at login (off until you turn it on in Settings → Fun)
         "screensaver": "starfield", # off | starfield | mystify | pipes
         "saverMinutes": 10,
         "chime": False,             # start-up chime
