@@ -239,8 +239,9 @@ class settings_lock:
         self.f.close()
 
 
-def update_settings(changes):
-    """Merge {"dotted.key": value} into settings.json under the lock, so nobody's change gets lost."""
+def update_settings(changes, drop=()):
+    """Merge {"dotted.key": value} into settings.json under the lock, so nobody's change gets lost.
+    Keys in `drop` are removed first (back to their defaults)."""
     with settings_lock():
         try:
             with open(SETTINGS) as f:
@@ -249,6 +250,12 @@ def update_settings(changes):
                 user = {}
         except (OSError, ValueError):
             user = {}
+        for k in drop:
+            node, parts = user, k.split(".")
+            for part in parts[:-1]:
+                node = node.get(part) if isinstance(node, dict) else None
+            if isinstance(node, dict):
+                node.pop(parts[-1], None)
         for k, v in changes.items():
             set_path(user, k, v)
         write_atomic(SETTINGS, json.dumps(user, indent=2) + "\n")
@@ -481,7 +488,10 @@ def build_palette(s):
     if c.get("source", "wallpaper") == "wallpaper" and is_live(s):
         lc = live_cfg(s)                       # live background: colours from the animation's colour
         r, g, b = hex_to_rgb(live_colors(lc["color"], lc["palette"])[0])
-        seed = colorsys.rgb_to_hls(r, g, b) + (lc["palette"] == "mono",)
+        hls0 = colorsys.rgb_to_hls(r, g, b)
+        # a grey animation (Black & white, or a grey colour on a palette that keeps it grey) has no hue
+        # to take: colorsys calls it red, which made the desktop pink. It goes black & white instead.
+        seed = hls0 + (lc["palette"] == "mono" or hls0[2] < 0.06,)
     elif c.get("source", "wallpaper") == "wallpaper" and wp:
         seed = seed_from_wallpaper(wp)
     if seed is None:
@@ -4101,6 +4111,10 @@ THEME_KEYS = ("colors.", "style.", "bar.", "windows.gapsIn", "windows.gapsOut", 
               "fun.btw", "fun.btwText", "fun.screensaver", "fun.pet", "login.dim", "terminal.opacity")
 
 
+# bar settings that are personal rather than part of a look: importing a theme keeps them
+THEME_KEEP = ("bar.clockFormat", "bar.clockSeconds", "bar.showDate", "bar.workspaces")
+
+
 def _flatten(d, prefix=""):
     out = {}
     for k, v in d.items():
@@ -4166,6 +4180,7 @@ def theme_import(path, keep=True, undo=True):
     th = theme_read(path)
     if undo:
         try:
+            os.makedirs(CACHE, exist_ok=True)
             theme_export("Before " + th.get("name", "theme"), path=os.path.join(CACHE, "undo.bevel"), with_wallpaper=False)
             with open(os.path.join(CACHE, "undo.path"), "w") as f:
                 f.write(load_settings()["wallpaper"]["path"])
@@ -4193,8 +4208,13 @@ def theme_import(path, keep=True, undo=True):
             and os.path.basename(path) != "undo.bevel":
         os.makedirs(THEME_DIRS[0], exist_ok=True)
         shutil.copy(path, os.path.join(THEME_DIRS[0], os.path.basename(path)))
+    # A theme is the whole look, bar included: whatever it doesn't set on the bar (the items you added,
+    # the height, the font…) goes back to the default instead of staying from the last theme.
+    # The clock format and the number of workspaces are yours, so they stay.
+    cur = _flatten(load_settings().get("bar", {}), "bar.")
+    drop = [k for k in cur if k not in ch and k not in THEME_KEEP]
     shell_busy()
-    update_settings(ch)
+    update_settings(ch, drop=drop)
     apply()
     ping_shell()
     return th.get("name", "")

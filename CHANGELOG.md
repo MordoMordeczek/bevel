@@ -2,6 +2,13 @@
 
 All notable changes to Bevel. Dates are when a build was pushed here.
 
+## 0.4.0 · 2026-10-20 · first public beta
+
+The first version for everyone. Thanks to whoever tries it: bug reports are very welcome.
+- **Real screenshots** in the README, taken on a laptop running Bevel.
+- **Themes reset the bar.** Applying a theme used to keep whatever you had added to the bar from before. Now a theme sets the whole bar: what it doesn't set goes back to the default, and Undo brings your old bar back. Your clock format and number of workspaces stay.
+- **Grey animated backgrounds give a grey desktop.** Picking grey (or another colour without any hue) for an animated background coloured the desktop pink. It now turns black and white, as a grey picture does.
+
 ## 0.3.2 · 2026-10-20 · first install on other hardware
 
 Tested on a Surface Pro 5 with CachyOS: Setup, the packages from CachyOS's repos, the taskbar, widgets and "I use CachyOS btw" all worked.

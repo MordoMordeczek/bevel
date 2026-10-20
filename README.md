@@ -9,7 +9,7 @@
 <img alt="Arch and Arch-based" src="https://img.shields.io/badge/Arch-%26%20Arch--based-db714d?style=flat-square&labelColor=2d1f1b&logo=archlinux&logoColor=e8a791">
 <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-e8a791?style=flat-square&labelColor=2d1f1b">
 <img alt="Vibecoded by Claude" src="https://img.shields.io/badge/vibecoded-by%20Claude-ffd23f?style=flat-square&labelColor=2d1f1b">
-<img alt="Status: early" src="https://img.shields.io/badge/status-early%20%26%20experimental-be9e93?style=flat-square&labelColor=2d1f1b">
+<img alt="Status: public beta" src="https://img.shields.io/badge/status-public%20beta-be9e93?style=flat-square&labelColor=2d1f1b">
 
 [**Screenshots**](#-screenshots) · [**Features**](#-whats-inside) · [**Install**](#-install) · [**Keys**](#-keys) · [**Manual**](docs/MANUAL.md) · [**Credits**](#-credits)
 
@@ -23,7 +23,7 @@
 > **Bevel is almost entirely vibecoded.** Nearly all of it was written by **Claude**, Anthropic's AI: the Quickshell shell, the `bevelctl` theme engine, the installer, the login screen, the pixel icons and pointers, the animated backgrounds, even this README. **[@MordoMordeczek](https://github.com/MordoMordeczek)** came up with it, steered it, and tested every build on a real laptop.
 >
 > So:
-> - It works on the machine it was made on (Arch, Hyprland 0.55 with the Lua config). Arch-based distros should work too, but other GPUs, distros and setups are mostly untested.
+> - It works on the laptop it was made on (Arch, Hyprland 0.55 with the Lua config) and has been installed on a Surface Pro 5 with CachyOS. Other GPUs, distros and setups are mostly untested: this is a **beta**.
 > - No human has reviewed the code line by line. **Read `install.sh` before you run it.** It uses `sudo` for packages, the login screen and the pointer theme.
 > - Your old config is backed up to `~/.config/bevel-backup-<date>/`, and `./uninstall.sh` puts it back. Keep your own backup anyway.
 
@@ -31,28 +31,35 @@
 
 ## 📸 Screenshots
 
-<p align="center"><img src="docs/img/desktop.png" alt="Bevel desktop: bar with workspace minimaps, fastfetch, the Lua keybinds in an editor, Bevel Settings" width="100%"></p>
+<p align="center"><img src="docs/img/fireflies-settings.png" alt="Bevel on Hyprland: the animated Fireflies background in purple, Bevel Settings on the wallpaper page, desktop tiles and the dock" width="100%"></p>
+<p align="center"><sub><b>Fireflies</b> · an animated background in any colour, Bevel Settings, tiles and the dock</sub></p>
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/img/dock-and-launcher.png" alt="Dock layout with Program Manager launcher and desktop widgets"></td>
-    <td width="50%"><img src="docs/img/taskbar-and-start.png" alt="Windows 95 taskbar with a Start menu, snow over the wallpaper"></td>
+    <td width="50%"><img src="docs/img/dragons-widgets.png" alt="Bevel bar with workspace minimaps over a painted landscape with dragons, desktop widgets down the left, snow falling"></td>
+    <td width="50%"><img src="docs/img/desert-taskbar-control-panel.png" alt="Windows 95 taskbar and the control panel in desert colours, a row of widgets along the top"></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Moss</b> · dock layout, Program Manager, desktop tiles</sub></td>
-    <td align="center"><sub><b>Ocean</b> · light panels, the 95 taskbar and Start menu, snow on top</sub></td>
+    <td align="center"><sub><b>Bevel layout</b> · workspace minimaps, a column of widgets, snow over the picture</sub></td>
+    <td align="center"><sub><b>Taskbar layout</b> · Start, the control panel, an effect drifting over the picture</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/img/islands-and-control-panel.png" alt="Island bar over the animated Synthwave background with the control panel open"></td>
-    <td width="50%"><img src="docs/img/settings.png" alt="Four pages of Bevel Settings in four palettes"></td>
+    <td width="50%"><img src="docs/img/rain-displays-fastfetch.png" alt="Display settings and fastfetch with Bevel's pixel Arch logo, in teal from a rainy wallpaper"></td>
+    <td width="50%"><img src="docs/img/purple-bar-editor.png" alt="The bar editor in Bevel Settings, a notification in the corner, the dock below"></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Vaporwave</b> · animated background, islands, control panel</sub></td>
-    <td align="center"><sub><b>Bevel Settings</b> · one app for everything, in four palettes</sub></td>
+    <td align="center"><sub><b>Rain</b> · displays, and fastfetch with the pixel logo of your distro</sub></td>
+    <td align="center"><sub><b>The bar, your way</b> · put any item anywhere, per layout</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/img/terminal-theme.png" alt="The Terminal theme: green on black islands, an ASCII art wallpaper"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub><b>Terminal</b> · one of the built-in themes, islands layout</sub></td>
   </tr>
 </table>
 
-<sub>The pictures are rendered from Bevel's own QML in a headless test harness with made-up data. The bar, panels, menus, widgets and Settings are the real shell; the terminal and editor in the first shot are drawn in.</sub>
+<sub>Real screenshots from a laptop running Bevel. The wallpapers belong to their artists and don't come with Bevel; any picture you pick recolours the desktop the same way.</sub>
 
 <br>
 
