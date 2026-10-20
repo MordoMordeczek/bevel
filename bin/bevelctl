@@ -1678,7 +1678,7 @@ def find_distro_logo(names):
     for n in names:
         if not n or "/" in n:
             continue
-        cands = ["/usr/share/pixmaps/%s.%s" % (n, e) for e in ("svg", "png")]
+        cands = ["%s/%s.%s" % (d, n, e) for d in ("/usr/share/pixmaps", "/usr/share/icons") for e in ("svg", "png")]
         cands += ["%s/%s/apps/%s.%s" % (r, z, n, e) for r in roots for z in sizes for e in ("svg", "png")]
         for c in cands:
             if os.path.isfile(c):

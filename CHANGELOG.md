@@ -2,6 +2,12 @@
 
 All notable changes to Bevel. Dates are when a build was pushed here.
 
+## 0.3.2 · 2026-10-20 · first install on other hardware
+
+Tested on a Surface Pro 5 with CachyOS: Setup, the packages from CachyOS's repos, the taskbar, widgets and "I use CachyOS btw" all worked.
+- **The CachyOS logo as pixel art:** Bevel now also looks for distro logos in `/usr/share/icons` (where CachyOS keeps `cachyos.svg`).
+- **No second bar after Setup:** Setup stops the distro's own Hyprland shell (another Quickshell config, HyprPanel, nwg-panel, AGS) for the rest of the session, as it already did for waybar.
+
 ## 0.3.1 · 2026-10-20 · Setup on fresh systems
 
 - **Setup updates the system first.** Before installing packages it switches on network time, refreshes the package keys (`archlinux-keyring`, and your distro's own) and runs `pacman -Syu`, so packages match the system instead of failing on a fresh or long-offline install. `--no-upgrade` skips it.

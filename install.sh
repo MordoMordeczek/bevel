@@ -901,6 +901,12 @@ step "Starting"
 if [ "$APPS_ONLY" = 0 ]; then
     for d in dunst mako swaync; do pgrep -x "$d" >/dev/null && { info "stopping $d (Bevel shows its own notifications)"; pkill -x "$d" || true; }; done
     pgrep -x waybar >/dev/null && { warn "waybar is running — Bevel has its own bar. Stopping it for this session."; pkill -x waybar || true; }
+    # other desktop shells a distro's Hyprland edition may start (CachyOS, Garuda…): their bars would sit on top of Bevel's
+    for d in hyprpanel nwg-panel ags; do pgrep -x "$d" >/dev/null && { info "stopping $d (Bevel has its own bar)"; pkill -x "$d" || true; }; done
+    if pgrep -af '(^|/)(qs|quickshell)( |$)' | grep -v -e '-c bevel' -e 'quickshell/bevel/' | grep -q .; then
+        info "stopping the other Quickshell desktop that was running (Bevel replaces it)"
+        pgrep -af '(^|/)(qs|quickshell)( |$)' | grep -v -e '-c bevel' -e 'quickshell/bevel/' | awk '{print $1}' | xargs -r kill 2>/dev/null || true
+    fi
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "${ON[hypr]}" = 1 ]; then
         pgrep -x awww-daemon >/dev/null || pgrep -x swww-daemon >/dev/null || \
             { (command -v awww-daemon >/dev/null && setsid -f awww-daemon) || (command -v swww-daemon >/dev/null && setsid -f swww-daemon) || true; } >/dev/null 2>&1
